@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      background: #fff;
+      padding: 40px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 24px;
+      border-bottom: 3px solid #4f6ef7;
+      margin-bottom: 28px;
+    }
+    .agency-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #4f6ef7;
+    }
+    .payslip-label {
+      font-size: 18px;
+      font-weight: 600;
+      color: #374151;
+      text-align: right;
+    }
+    .period-label {
+      font-size: 13px;
+      color: #6b7280;
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    /* ── Info grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .info-box {
+      background: #f8f9fc;
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .info-box h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .info-row .label { color: #6b7280; }
+    .info-row .value { font-weight: 500; color: #111827; }
+
+    /* ── Attendance summary ── */
+    .attendance-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .att-card {
+      flex: 1;
+      background: #eff6ff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      text-align: center;
+    }
+    .att-card .att-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #4f6ef7;
+    }
+    .att-card .att-label {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* ── Pay breakdown table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    thead tr {
+      background: #4f6ef7;
+      color: #fff;
+    }
+    thead th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    tbody tr { border-bottom: 1px solid #f3f4f6; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    tbody td {
+      padding: 10px 16px;
+      font-size: 13px;
+      color: #374151;
+    }
+    tbody td.amount { text-align: right; font-weight: 500; }
+    tbody td.deduction { color: #dc2626; }
+
+    /* ── Net pay box ── */
+    .net-pay-box {
+      background: #4f6ef7;
+      color: #fff;
+      border-radius: 10px;
+      padding: 20px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .net-pay-box .net-label {
+      font-size: 15px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+    .net-pay-box .net-amount {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 16px;
+      font-size: 11px;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+    }
+    .stamp {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="agency-name">{{ agency_name }}</div>
+    </div>
+    <div>
+      <div class="payslip-label">Payslip</div>
+      <div class="period-label">{{ period_label }}</div>
+    </div>
+  </div>
+
+  <!-- Employee + Pay Period Info -->
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>Employee Details</h3>
+      <div class="info-row">
+        <span class="label">Name</span>
+        <span class="value">{{ employee_name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Email</span>
+        <span class="value">{{ employee_email }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Designation</span>
+        <span class="value">{{ designation }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Employee ID</span>
+        <span class="value">{{ employee_id_short }}</span>
+      </div>
+    </div>
+    <div class="info-box">
+      <h3>Pay Period</h3>
+      <div class="info-row">
+        <span class="label">Period</span>
+        <span class="value">{{ period_label }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Compensation Type</span>
+        <span class="value">{{ compensation_type | capitalize }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Rate</span>
+        <span class="value">₹{{ compensation_rate }}</span>
+      </div>
+      <div class="info-row">
+        <span class="label">Payslip ID</span>
+        <span class="value">{{ payslip_id_short }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Summary -->
+  <div class="attendance-row">
+    <div class="att-card">
+      <div class="att-value">{{ days_present }}</div>
+      <div class="att-label">Days Present</div>
+    </div>
+    <div class="att-card">
+      <div class="att-value">{{ hours_worked }}</div>
+      <div class="att-label">Hours Worked</div>
+    </div>
+  </div>
+
+  <!-- Pay Breakdown -->
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th style="text-align:right">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Gross Pay</td>
+        <td class="amount">{{ "%.2f"|format(gross_pay) }}</td>
+      </tr>
+      {% if allowances > 0 %}
+      <tr>
+        <td>Allowances</td>
+        <td class="amount">{{ "%.2f"|format(allowances) }}</td>
+      </tr>
+      {% endif %}
+      {% if deductions > 0 %}
+      <tr>
+        <td class="deduction">Deductions</td>
+        <td class="amount deduction">- {{ "%.2f"|format(deductions) }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <!-- Net Pay -->
+  <div class="net-pay-box">
+    <div class="net-label">Net Pay for {{ period_label }}</div>
+    <div class="net-amount">₹{{ "%.2f"|format(net_pay) }}</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>This is a system-generated payslip. No signature required.</span>
+    <span class="stamp">Generated on {{ generated_on }}</span>
+  </div>
+
+</body>
+</html>

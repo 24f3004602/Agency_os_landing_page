@@ -1,0 +1,38 @@
+fastapi
+uvicorn[standard]
+
+# Database
+sqlalchemy[asyncio]
+sqlalchemy
+asyncpg
+alembic
+
+# Config & validation
+pydantic-settings
+pydantic[email]
+python-dotenv
+
+# Auth
+python-jose[cryptography]
+bcrypt
+python-multipart
+
+# Task queue
+celery
+redis
+
+# AI
+langgraph
+anthropic
+qdrant-client
+# Embeddings provider decided at Module 3
+
+# HTTP
+httpx
+
+# Data
+pandas
+
+# PDF generation (M1 payslips, M3 reports)
+weasyprint
+jinja2

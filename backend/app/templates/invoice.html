@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      background: #fff;
+      padding: 40px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 24px;
+      border-bottom: 3px solid #4f6ef7;
+      margin-bottom: 32px;
+    }
+    .agency-name { font-size: 24px; font-weight: 700; color: #4f6ef7; }
+    .invoice-meta { text-align: right; }
+    .invoice-title { font-size: 20px; font-weight: 700; color: #111827; }
+    .invoice-number { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+    .parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 32px;
+    }
+    .party-box h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .party-name { font-size: 15px; font-weight: 600; color: #111827; }
+    .party-detail { font-size: 13px; color: #6b7280; margin-top: 3px; }
+
+    .dates {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    .date-card {
+      background: #f8f9fc;
+      border-radius: 8px;
+      padding: 12px 20px;
+    }
+    .date-card .date-label {
+      font-size: 11px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .date-card .date-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-top: 2px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    thead tr { background: #4f6ef7; color: #fff; }
+    thead th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    thead th.right { text-align: right; }
+    tbody tr { border-bottom: 1px solid #f3f4f6; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    tbody td { padding: 11px 16px; font-size: 13px; color: #374151; }
+    tbody td.right { text-align: right; font-weight: 500; }
+
+    .totals {
+      margin-left: auto;
+      width: 280px;
+      margin-bottom: 24px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      font-size: 13px;
+      color: #6b7280;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .total-row.final {
+      background: #4f6ef7;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      margin-top: 8px;
+    }
+    .total-row .t-label { font-weight: 500; }
+    .total-row .t-value { font-weight: 600; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-draft { background: #f3f4f6; color: #6b7280; }
+    .status-sent { background: #dbeafe; color: #1d4ed8; }
+    .status-paid { background: #dcfce7; color: #16a34a; }
+    .status-overdue { background: #fee2e2; color: #dc2626; }
+
+    .footer {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .notes-box {
+      background: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      border-radius: 4px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div class="agency-name">{{ agency_name }}</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="invoice-title">Invoice</div>
+      <div class="invoice-number"># {{ invoice_number }}</div>
+      <div style="margin-top:8px;">
+        <span class="status-badge status-{{ status }}">{{ status }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="party-box">
+      <h3>From</h3>
+      <div class="party-name">{{ agency_name }}</div>
+    </div>
+    <div class="party-box">
+      <h3>Bill To</h3>
+      <div class="party-name">{{ client_company }}</div>
+      <div class="party-detail">{{ client_contact }}</div>
+      <div class="party-detail">{{ client_email }}</div>
+    </div>
+  </div>
+
+  <div class="dates">
+    <div class="date-card">
+      <div class="date-label">Invoice Date</div>
+      <div class="date-value">{{ invoice_date }}</div>
+    </div>
+    {% if due_date %}
+    <div class="date-card">
+      <div class="date-label">Due Date</div>
+      <div class="date-value">{{ due_date }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="right">Qty</th>
+        <th class="right">Unit Price (₹)</th>
+        <th class="right">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td class="right">{{ item.quantity }}</td>
+        <td class="right">{{ "%.2f"|format(item.unit_price) }}</td>
+        <td class="right">{{ "%.2f"|format(item.quantity * item.unit_price) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row">
+      <span class="t-label">Subtotal</span>
+      <span class="t-value">₹{{ "%.2f"|format(subtotal) }}</span>
+    </div>
+    <div class="total-row">
+      <span class="t-label">GST ({{ tax_percent }}%)</span>
+      <span class="t-value">₹{{ "%.2f"|format(tax_amount) }}</span>
+    </div>
+    <div class="total-row final">
+      <span class="t-label">Total Due</span>
+      <span class="t-value">₹{{ "%.2f"|format(total_amount) }}</span>
+    </div>
+  </div>
+
+  {% if notes %}
+  <div class="notes-box">
+    <strong>Notes:</strong> {{ notes }}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <span>Thank you for your business.</span>
+    <span>Generated on {{ generated_on }}</span>
+  </div>
+
+</body>
+</html>

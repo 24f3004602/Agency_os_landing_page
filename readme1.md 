@@ -1,0 +1,1968 @@
+# Agency OS — Complete Documentation
+
+> **Multi-tenant SaaS platform for digital marketing agencies.**
+> Self-hosted. AI-powered. Built on FastAPI, LangGraph, React, and Claude.
+
+---
+
+## Table of Contents
+
+1. [What Is Agency OS](#1-what-is-agency-os)
+2. [What Problem Does It Solve](#2-what-problem-does-it-solve)
+3. [How the Platform Works](#3-how-the-platform-works)
+4. [User Roles Explained](#4-user-roles-explained)
+5. [Module Architecture](#5-module-architecture)
+6. [Tech Stack](#6-tech-stack)
+7. [System Architecture](#7-system-architecture)
+8. [Prerequisites](#8-prerequisites)
+9. [Local Development Setup](#9-local-development-setup)
+10. [Production Deployment](#10-production-deployment)
+11. [Environment Variables Reference](#11-environment-variables-reference)
+12. [Database Schema Overview](#12-database-schema-overview)
+13. [API Reference](#13-api-reference)
+14. [Testing Guide](#14-testing-guide)
+15. [Debugging Guide](#15-debugging-guide)
+16. [Celery Tasks Reference](#16-celery-tasks-reference)
+17. [LangGraph Agents Reference](#17-langgraph-agents-reference)
+18. [n8n Webhook Setup](#18-n8n-webhook-setup)
+19. [Adding a New Agency (Step by Step)](#19-adding-a-new-agency-step-by-step)
+20. [Common Issues and Fixes](#20-common-issues-and-fixes)
+21. [Upgrading and Migrations](#21-upgrading-and-migrations)
+22. [Backup and Recovery](#22-backup-and-recovery)
+23. [Security Considerations](#23-security-considerations)
+24. [Contributing and Code Structure](#24-contributing-and-code-structure)
+
+---
+
+## 1. What Is Agency OS
+
+Agency OS is a **complete operating system for digital marketing agencies**, sold as a multi-tenant SaaS product. The person who builds and sells it — you — operates from a SuperAdmin layer that sits above all agency tenants.
+
+Each agency that purchases the product gets their own isolated environment:
+- Their own owner and employees
+- Their own clients
+- Only the modules they have paid for
+- Complete data isolation from all other agencies
+
+The platform has **four layers of users** (SuperAdmin, Agency Owner, Employee, Client) and **eleven feature modules** that agencies can purchase incrementally, each building on the previous.
+
+### What makes it different
+
+- **Self-hosted** — runs entirely on your own hardware. No AWS, no Vercel, no third-party SaaS fees beyond API keys. Your homelab runs the entire stack.
+- **AI-native** — eleven LangGraph agents handle tasks that would otherwise require dedicated staff: scoring leads, generating reports, auditing communications, optimising ad campaigns, orchestrating outreach sequences.
+- **Multi-tenant by design** — one codebase, one database, one backend serves every agency with full data isolation via `agency_id` row-level tenancy.
+- **Module-gated** — agencies only see and access what they have paid for. One SQL toggle activates a module instantly.
+
+---
+
+## 2. What Problem Does It Solve
+
+### The agency problem
+
+A typical digital marketing agency with 5-20 employees wastes 30-40% of its time on:
+
+| Problem | Hours wasted per week |
+|---|---|
+| Manual client report generation | 8-12h |
+| Tracking employee attendance and tasks | 4-6h |
+| Chasing client approvals for content | 3-5h |
+| Manual payroll calculation | 3-4h |
+| CRM updates after deals close | 2-3h |
+| Monitoring ad campaigns for anomalies | 5-8h |
+| Personalising cold outreach | 4-6h |
+| Competitive research | 3-5h |
+
+Agency OS eliminates or drastically reduces all of these through automation and AI.
+
+### The tool fragmentation problem
+
+Most agencies use 10-15 disconnected tools: Slack, Notion, Trello, HubSpot, Google Sheets for payroll, WhatsApp for client approval, email for reports, Buffer for scheduling, and a different dashboard per ad platform.
+
+Agency OS replaces all of these with a single platform where **every data point is connected**. The EOM scoring agent can factor in client satisfaction signals from communications. The churn agent can read performance data from reports. The outreach agent can pull competitor intelligence gathered by the research agent. All from one shared database.
+
+### The margin problem
+
+Selling Agency OS to agencies on a monthly retainer gives you predictable recurring revenue while agencies get a tool that replaces multiple subscriptions and saves 30+ hours per month.
+
+---
+
+## 3. How the Platform Works
+
+### The tenant model
+
+```
+SuperAdmin (you)
+    │
+    ├── Agency 1 (e.g. "Ravi's Digital")
+    │       ├── Owner: ravi@ravisdgital.com
+    │       ├── Employees: 5 people
+    │       ├── Clients: 12 companies
+    │       └── Active modules: M1, M2, M3, M4
+    │
+    ├── Agency 2 (e.g. "Spark Media")
+    │       ├── Owner: priya@sparkmedia.in
+    │       ├── Employees: 8 people
+    │       ├── Clients: 20 companies
+    │       └── Active modules: M1, M2, M3, M5, M6, M7
+    │
+    └── Agency 3 ...
+```
+
+Every row in every table has an `agency_id` foreign key. Every API endpoint checks `current_user.agency_id` before returning data. An owner at Agency 1 physically cannot see Agency 2's data even if they know the UUID — the query always filters by their agency ID.
+
+### The module model
+
+Modules are activated per-agency in the `agency_modules` table. A module toggle takes effect instantly — no deployment, no code change.
+
+```sql
+-- What activating M3 for an agency looks like:
+INSERT INTO agency_modules (agency_id, module_code, is_active, activated_at)
+VALUES ('agency-uuid', 'M3', true, now());
+```
+
+Every M3 endpoint has `require_module("M3")` as a FastAPI dependency. If `is_active = false`, every M3 request returns `403 Forbidden`. If `is_active = true`, they pass through.
+
+### The event flow
+
+```
+External event (HubSpot deal, Gmail reply, WhatsApp message)
+        │
+        ▼
+    n8n (webhook router)
+        │
+        ▼
+    FastAPI endpoint
+        │
+        ├── Writes to PostgreSQL
+        ├── May trigger Celery task
+        └── May trigger LangGraph agent
+                │
+                ▼
+            Claude API
+                │
+                ▼
+            Action taken (email sent, alert raised, score saved)
+```
+
+---
+
+## 4. User Roles Explained
+
+### SuperAdmin (You)
+
+- **Access**: `admin.yourdomain.com` or `/superadmin` route
+- **Credentials**: Hardcoded in `.env` as `SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`. Never stored in the database.
+- **Can do**: Create agencies, activate/deactivate modules, view all tenants' data, monitor all AI agents system-wide, manage billing records
+- **Cannot see**: Their own account from the agency owner's perspective
+
+**First login flow:**
+```
+Open https://app.yourdomain.com
+Enter superadmin email + password from .env
+→ Redirected to /superadmin
+→ Create first agency via "New Agency" button
+→ Agency owner gets their credentials
+```
+
+### Agency Owner
+
+- **Access**: `/owner` route after login
+- **Credentials**: Created by SuperAdmin via `POST /superadmin/agencies`
+- **Can do**: Everything within their agency — create employees, create clients, assign tasks, run payroll, trigger AI agents, see all reports and communications
+- **Cannot see**: Other agencies, SuperAdmin layer, other employees' payslips
+
+**First owner login flow:**
+```
+SuperAdmin creates the agency and sets owner email/password
+Owner logs in at https://app.yourdomain.com
+→ Redirected to /owner
+→ Sees their dashboard with modules that SuperAdmin activated
+→ First step: create geofence zones (Settings) and add employees
+```
+
+### Employee
+
+- **Access**: `/employee` route after login
+- **Credentials**: Created by Agency Owner via `POST /employees`
+- **Can do**: Clock in/out, view and update their tasks, see their own clients, send client communications, download their own payslips
+- **Cannot see**: Other employees' data, payroll figures, financial information, AI agent logs
+
+**Employee first use:**
+```
+Owner creates employee account with email + password
+Employee logs in at https://app.yourdomain.com
+→ Redirected to /employee
+→ First action: tap "Clock In" on the Attendance page
+→ Browser requests GPS location
+→ If within geofence zone: clocked in
+→ If outside zone: rejection message with distance to nearest zone
+```
+
+### Client
+
+- **Access**: `/client` route after login
+- **Credentials**: Created when owner creates a client record and enables portal access
+- **Can do**: View their campaign reports, approve or reject content drafts, see their invoices, communicate with account team
+- **Cannot see**: Other clients, any internal agency data, employee information
+
+---
+
+## 5. Module Architecture
+
+Modules must be purchased and activated in dependency order. Each module builds on the infrastructure of the previous one.
+
+### M1 — Workforce Intelligence (Foundation)
+**Required for all other modules.**
+
+**What it does:**
+- **Geofenced attendance** — employees clock in via GPS on their phone. The backend calculates the Haversine distance between their coordinates and each office zone. If within radius: session opens. Clock-out calculates hours worked automatically.
+- **Task dispatch** — owner creates tasks with title, description, priority (low/medium/high/urgent), deadline, and assigned employee. Tasks move through: `created → in_progress → submitted → verified/rejected`. Every status change is logged to `task_status_history`.
+- **Payroll generation** — at end of month, system aggregates attendance records for each employee, calculates gross pay (fixed salary or hours × rate), applies deductions/allowances, and generates a professional PDF payslip via WeasyPrint.
+- **Communication logging** — every email or WhatsApp message sent from an employee to a client is tagged and stored. Inbound replies are captured via webhooks.
+- **EOM scoring** — on the 1st of each month at 02:00 IST, a LangGraph agent scores every employee on task performance (on-time rate, first-pass rate) and client satisfaction (Claude sentiment analysis of inbound messages). Owner reviews before publishing.
+- **Compliance audit** — nightly Claude scan of all outbound messages. Flags personal contact sharing, off-platform redirect attempts, and unauthorised pricing discussions.
+
+**Celery jobs:** `flag_incomplete_sessions` (23:00 IST), `send_deadline_reminders` (09:00 IST), `escalate_overdue_tasks` (hourly), `audit_communications` (02:00 IST)
+
+---
+
+### M2 — Operations Core
+**Requires M1.**
+
+**What it does:**
+- **Client onboarding** — when a HubSpot deal closes, n8n fires a webhook. The OnboardingGraph LangGraph agent generates a structured client brief using Claude, sends a welcome email, creates a kickoff calendar invite (stub), updates the client record, and notifies the account manager.
+- **Invoice generation** — owner creates invoices with line items and GST. WeasyPrint generates a professional PDF. Invoice status tracking: draft → sent → paid/overdue.
+- **HubSpot sync** — deal stage changes in HubSpot trigger real-time updates to the platform via n8n webhooks.
+
+**LangGraph agent:** `OnboardingGraph` (4 nodes: generate_brief → send_email → update_crm → notify_am)
+
+---
+
+### M3 — Insights & Reporting Agent
+**Requires M2.**
+
+**What it does:**
+- Pulls live campaign data from GA4, Meta Ads Manager, and Google Ads APIs
+- Pandas processes raw metrics into standardised format
+- Claude generates a human-quality narrative: performance summary, key wins, areas of concern, recommended next actions
+- WeasyPrint assembles branded PDF report
+- Delivered to client via Gmail + WhatsApp
+- Follow-up loop: if no client reply in 48h, drafts a nudge for AM review
+
+**Per-client config:** Schedule (weekly/monthly), platforms, KPI targets (ROAS, CTR, CPC)
+
+**Stub behaviour:** If API credentials are missing, returns realistic sample data so the full pipeline can be tested.
+
+**LangGraph agent:** `ReportingAgent` (6 nodes: pull_data → process_metrics → generate_narrative → assemble_pdf → deliver → monitor_reply)
+
+---
+
+### M4 — Churn Prevention Agent
+**Requires M3.**
+
+**What it does:**
+- Daily scan of every active client across all M4-enabled agencies
+- Collects signals from three categories:
+  - **Performance signals** (from M3 reports): ROAS decline, CTR drop, consecutive period degradation
+  - **Engagement signals** (from M1 comms): reduced inbound frequency, days since last message, sentiment trends
+  - **Operational signals** (from M2): overdue invoices, stalled tasks
+- Claude evaluates all signals and produces a score 0-100 with a rationale
+- If score ≥ threshold (default 40): creates a `ChurnAlert` record, updates client status to `at_risk`, notifies owner
+- If M6 (Research Agent) is active: enriches alert with competitor intelligence
+
+**Alert resolution:** Owner marks as `resolved` or `false_positive`. Client reverts to `active` when all alerts are closed.
+
+---
+
+### M5 — Campaign Task Manager
+**Requires M2.**
+
+**What it does:**
+- Separate from M1 tasks — M5 is about **what content gets produced for clients**, not employee accountability
+- Campaign → Campaign Tasks pipeline: `brief → in_progress → draft → review → approved → scheduled → live`
+- When task reaches `approved`: automatically calls Buffer REST API to schedule the post
+- Links to M3 (reports reference what was produced) and M10 (performance monitoring after going live)
+
+---
+
+### M6 — Research Agent
+**Requires M2.**
+
+**What it does:**
+- Owner adds competitors to track per client (with Meta page ID and domain)
+- Weekly scan pulls data from:
+  - **Meta Ad Library API** — active ads, estimated spend, creative formats
+  - **SerpAPI** — Google organic rankings, active paid ads, brand snippets
+- Claude synthesises raw data into a structured competitive intelligence brief with 5 sections: overview, advertising strategy, key changes, threat assessment, counter-strategies
+- Brief stored in **Qdrant** as a vector — M4 (churn enrichment) and M8 (outreach personalisation) can retrieve relevant context via semantic search
+- Owner sees a feed of all generated briefs, filterable by client or industry
+
+**Qdrant collection:** `research_briefs` — 768-dim embeddings (nomic-embed-text or hash stub)
+
+---
+
+### M7 — Lead Analyst Agent
+**Requires M2.**
+
+**What it does:**
+- Owner defines the agency's **Ideal Client Profile (ICP)** in natural language: ideal industries, company size, ad budget range, decision-maker title, pain points, disqualifiers
+- Leads arrive via: manual entry, HubSpot webhook (via n8n), or direct API
+- LangGraph agent: loads lead data → loads ICP → Claude scores lead 0-100 → writes back to HubSpot → creates follow-up task for AE → notifies owner
+- Lead dashboard sorted by score descending — highest-fit leads appear first
+- Hourly Celery job scores any unscored leads automatically
+
+---
+
+### M8 — Personalisation & Outreach Agent
+**Requires M6 + M7.**
+
+**What it does:**
+- For a given lead, retrieves: ICP score and rationale (M7), competitor intelligence for their vertical (M6 Qdrant search)
+- Claude writes a **3-step personalised outreach sequence**:
+  - Step 1 (day 0): Personalised cold email referencing competitor intel
+  - Step 2 (day 3): LinkedIn message (shorter, conversational)
+  - Step 3 (day 7): Follow-up with case study angle
+- Two send modes:
+  - **Manual**: AE reviews each step before it goes out
+  - **Auto**: steps send on schedule without intervention
+- Reply detection: when Gmail polling detects a reply, sequence pauses and AE is notified
+
+---
+
+### M9 — ABM Orchestrator
+**Requires M8.**
+
+**What it does:**
+- Account-based marketing for the agency's highest-priority target accounts
+- Journey state machine: `identified → researching → first_touch → engaged → proposal → closed_won | closed_lost`
+- LangGraph agent evaluates account state, recommends next touch (channel + type + timing), generates content, routes to channel, logs touch, and advances stage if conditions met
+- Multi-channel: email, LinkedIn, WhatsApp, calls/meetings
+- Account intelligence feed sorted by days stale — most neglected accounts surface first
+- Weekly Celery job: reviews all stale accounts (7+ days no touch) and runs orchestration
+
+---
+
+### M10 — Optimisation & Prediction Engine
+**Requires M3 + M5.**
+
+**What it does:**
+- Pulls last 7 days of live campaign data from Meta and Google Ads
+- Compares metrics to KPI targets — identifies performance gaps with severity ratings
+- Claude generates ranked list of specific recommendations (pause underperforming ads, reallocate budgets, adjust bids) with confidence scores and rationale
+
+**Two modes:**
+- **Advisory (default)**: recommendations delivered to AM via Slack. AM approves each individually. Nothing happens automatically.
+- **Autonomous (opt-in per client)**: approved change types execute directly via ad platform APIs within guardrails (max budget change %, max bid change %, minimum daily budget). Kill switch disables instantly.
+
+**Predictive alerts:** Daily trajectory analysis projects end-of-month performance. If a KPI is on track to miss target, raises a `PredictiveAlert` with severity (warning/critical) and days remaining.
+
+---
+
+### M11 — Campaign Orchestration Platform
+**Requires M5 + M10.**
+
+**What it does:**
+- Owner or employee creates a **content brief** (objective, audience, key message, tone, platform, content type, word limit)
+- Claude generates N variations (default 3), each with a different creative angle (Emotional, Feature-led, Urgency)
+- Owner selects the best draft and submits for client approval
+- Client approves via:
+  - **Portal**: logs into Dashboard 3, clicks Approve or Request Changes
+  - **WhatsApp**: replies "APPROVE" or "REJECT - feedback" to WATI message
+- On approval: automatically schedules via Buffer REST API, updates M5 campaign task to `scheduled`
+- Performance feedback loop: M10 monitors published content performance, M3 includes it in next report
+
+---
+
+## 6. Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Backend language | Python 3.11 | Async support, AI ecosystem |
+| Web framework | FastAPI | High-performance async, auto-generates Swagger UI |
+| Agent orchestration | LangGraph | Stateful multi-node AI graphs with full audit trails |
+| LLM | Claude (Haiku for fast tasks, Sonnet for complex) | Best instruction-following, JSON output reliability |
+| Task queue | Celery + Redis | Scheduled jobs, background processing, beat scheduler |
+| Primary database | PostgreSQL 15 | ACID compliance, row-level security, UUID support |
+| Vector store | Qdrant | Semantic search for agent context retrieval |
+| Embeddings | nomic-embed-text via Ollama (CPU) | Open-source, self-hosted, no API cost |
+| Event router | n8n (self-hosted) | Webhook intake, workflow automation |
+| PDF generation | WeasyPrint + Jinja2 | HTML-to-PDF, full CSS styling |
+| Frontend | React 18 + Vite | Fast dev server, component-based |
+| Styling | Tailwind CSS | Utility-first, consistent design tokens |
+| State management | Zustand | Lightweight, persisted auth state |
+| API client | Axios + React Query | Auto-retry, background refetch, optimistic updates |
+| Email | Gmail API (OAuth) | Inbound + outbound, reply detection |
+| WhatsApp | WATI API | Client-facing messaging |
+| Internal alerts | Slack SDK | Team notifications |
+| Social scheduling | Buffer REST API | Post scheduling from approval pipeline |
+| CRM | HubSpot Python SDK | Lead and deal management |
+| Ads data | Meta Marketing API + Google Ads API + GA4 | Campaign performance |
+| Infrastructure | Proxmox (self-hosted) | Host VMs on your own hardware |
+| Auth | JWT (PyJWT) + bcrypt | Stateless, role-based |
+
+---
+
+## 7. System Architecture
+
+### Development architecture
+
+```
+YOUR MAC (development)
+├── FastAPI (uvicorn --reload, port 8000)
+├── Celery worker
+├── React/Vite (port 5173)
+│
+│  ← Tailscale VPN →
+│
+HOMELAB LAPTOP
+├── PostgreSQL :5432
+├── Redis :6379
+├── Qdrant :6333
+└── n8n :5678
+
+Mac calls homelab services via Tailscale IP.
+n8n calls FastAPI via Mac's Tailscale IP.
+```
+
+### Production architecture
+
+```
+INTERNET
+    │ HTTPS
+    ▼
+nginx (app VM)
+├── app.domain.com → React build (static files)
+└── api.domain.com → FastAPI :8000
+
+App VM (Proxmox)
+├── Docker: agencyos_api
+├── Docker: agencyos_celery_worker
+└── Docker: agencyos_celery_beat
+
+Data VM (homelab, connected via Tailscale)
+├── PostgreSQL :5432
+├── Redis :6379
+├── Qdrant :6333
+└── n8n :5678
+```
+
+### Database tenancy model
+
+Every single table that stores agency data has `agency_id UUID NOT NULL` as a column and foreign key to `agencies.id`. The API layer enforces this in every query:
+
+```python
+# Every query looks like this — never just select(Task)
+query = select(Task).where(
+    Task.agency_id == current_user.agency_id
+)
+```
+
+There is no shared data between agencies except:
+- `agencies` table (agency names only, readable by SuperAdmin)
+- `agency_modules` table (which modules are active)
+
+---
+
+## 8. Prerequisites
+
+### For development (your Mac)
+
+| Requirement | Version | Install |
+|---|---|---|
+| Python | 3.11+ | `brew install python@3.11` |
+| Node.js | 18+ | `brew install node` |
+| Git | any | `brew install git` |
+| Tailscale | latest | https://tailscale.com/download |
+
+### For homelab (data services)
+
+| Requirement | Notes |
+|---|---|
+| Docker + Docker Compose | Must be running |
+| PostgreSQL 15 | In existing Docker container |
+| Redis 7 | Can use existing or new container |
+| Qdrant | New container from `infra/docker-compose.homelab.yml` |
+| n8n | Existing self-hosted instance |
+| Tailscale | To connect Mac ↔ homelab securely |
+
+### For production (Proxmox VM)
+
+| Requirement | Notes |
+|---|---|
+| Ubuntu 24.04 LTS | App VM |
+| Docker + Docker Compose | For containers |
+| nginx | For reverse proxy |
+| Certbot | For SSL |
+| Node.js 20 | For building frontend |
+| Domain name | With A records pointing to public IP |
+| Port forwarding | 80 and 443 forwarded on your router |
+
+---
+
+## 9. Local Development Setup
+
+### Step 1 — Set up homelab data services
+
+SSH into your homelab laptop and run:
+
+```bash
+# Create agencyos database
+docker exec -it <your_postgres_container> psql -U postgres << 'SQL'
+CREATE USER agencyos_user WITH PASSWORD 'agencyos_pass';
+CREATE DATABASE agencyos OWNER agencyos_user;
+GRANT ALL PRIVILEGES ON DATABASE agencyos TO agencyos_user;
+SQL
+
+# Start Redis and Qdrant (if not already running)
+cd /path/to/agencyos/infra
+docker compose -f docker-compose.homelab.yml up -d
+
+# Verify services
+docker ps | grep -E "redis|qdrant"
+curl http://localhost:6333/collections   # Qdrant health
+redis-cli ping                           # Redis health → PONG
+```
+
+### Step 2 — Find your homelab's Tailscale IP
+
+```bash
+# On homelab
+tailscale ip -4
+# Returns something like: 100.64.x.x
+
+# Or if both on same WiFi
+ip addr show | grep "192.168"
+```
+
+### Step 3 — Backend setup
+
+```bash
+# Clone the repo or extract the project zip
+cd agencyos/backend
+
+# Create virtual environment
+python3.11 -m venv venv
+source venv/bin/activate
+
+# Install all dependencies
+pip install -r requirements.txt
+
+# Create .env from example
+cp .env.example .env
+
+# Edit .env — replace HOMELAB_IP with your actual IP
+nano .env
+```
+
+**Minimum required `.env` values for local dev:**
+
+```bash
+APP_ENV=development
+SECRET_KEY=any-long-random-string-for-local-dev
+SUPERADMIN_EMAIL=admin@agencyos.app
+SUPERADMIN_PASSWORD=Admin@123
+
+# Replace with your homelab's Tailscale or LAN IP
+DATABASE_URL=postgresql+asyncpg://agencyos_user:agencyos_pass@192.168.x.x:5432/agencyos
+REDIS_URL=redis://192.168.x.x:6379/0
+QDRANT_HOST=192.168.x.x
+QDRANT_PORT=6333
+
+ALLOWED_ORIGINS=http://localhost:5173
+```
+
+Leave all API keys (Anthropic, Gmail, WATI, HubSpot, etc.) empty for now — the system stubs gracefully when credentials are missing.
+
+### Step 4 — Run database migrations
+
+```bash
+# Still in backend/ with venv active
+
+# Generate initial migration from all models
+alembic revision --autogenerate -m "initial schema"
+
+# Apply migration — creates all 30+ tables
+alembic upgrade head
+
+# Verify: should see tables in the output
+docker exec -it <postgres_container> psql -U agencyos_user -d agencyos -c "\dt"
+```
+
+### Step 5 — Start the backend
+
+```bash
+# Terminal 1 — FastAPI
+uvicorn app.main:app --reload --port 8000
+
+# You should see:
+# INFO:     Agency OS starting in [development] mode
+# INFO:     Uvicorn running on http://0.0.0.0:8000
+
+# Open: http://localhost:8000/health
+# Returns: {"status":"ok","env":"development"}
+
+# Open: http://localhost:8000/docs
+# Full Swagger UI with all endpoints
+```
+
+### Step 6 — Start Celery
+
+```bash
+# Terminal 2 — Celery worker
+source venv/bin/activate
+celery -A celery_worker.celery_app worker \
+  --loglevel=info \
+  -Q m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,agents,default
+
+# Terminal 3 — Celery Beat (scheduler)
+source venv/bin/activate
+celery -A celery_worker.celery_app beat \
+  --loglevel=info \
+  --scheduler celery.beat.PersistentScheduler
+```
+
+### Step 7 — Start the frontend
+
+```bash
+# Terminal 4
+cd agencyos/frontend
+npm install
+npm run dev
+
+# Open: http://localhost:5173
+# Login page loads
+```
+
+### Step 8 — First login
+
+Open `http://localhost:5173` and log in with:
+- **Email**: whatever you set as `SUPERADMIN_EMAIL` in `.env`
+- **Password**: whatever you set as `SUPERADMIN_PASSWORD`
+
+You should land on `/superadmin`.
+
+### Step 9 — Create your first agency
+
+In Swagger (`http://localhost:8000/docs`):
+
+1. Click `POST /api/v1/auth/login` → Try it out → Execute with superadmin credentials
+2. Copy the `access_token` from the response
+3. Click the **Authorize** button (top right) → paste token → Authorize
+4. Click `POST /api/v1/superadmin/agencies` → Try it out:
+
+```json
+{
+  "agency_name": "Test Agency",
+  "owner_full_name": "Test Owner",
+  "owner_email": "owner@test.com",
+  "owner_password": "Test@1234",
+  "modules_to_activate": ["M1"]
+}
+```
+
+5. Execute → note the returned `agency_id` and `owner_user_id`
+6. Log in as the owner to verify: `POST /auth/login` with `owner@test.com` / `Test@1234`
+
+---
+
+## 10. Production Deployment
+
+### Server requirements
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| CPU | 2 cores | 4 cores |
+| RAM | 4 GB | 8 GB |
+| Disk | 20 GB | 50 GB |
+| OS | Ubuntu 22.04 | Ubuntu 24.04 |
+
+### Full production setup
+
+**Step 1 — Install dependencies on app VM:**
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io docker-compose-plugin nginx \
+    certbot python3-certbot-nginx git curl nodejs npm
+sudo usermod -aG docker $USER && newgrp docker
+```
+
+**Step 2 — Deploy code:**
+```bash
+sudo mkdir -p /opt/agencyos/{media,backups/postgres,backups/qdrant,logs}
+sudo chown -R $USER:$USER /opt/agencyos
+cd /opt/agencyos
+git clone https://github.com/YOURUSER/agencyos.git .
+```
+
+**Step 3 — Configure environment:**
+```bash
+cp backend/.env.production backend/.env
+nano backend/.env   # Fill all REPLACE_WITH_* values
+```
+
+**Step 4 — Run migrations:**
+```bash
+cd backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+deactivate
+```
+
+**Step 5 — Build and start Docker services:**
+```bash
+cd /opt/agencyos/infra
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+curl http://localhost:8000/health   # Should return OK
+```
+
+**Step 6 — Build frontend:**
+```bash
+cd /opt/agencyos/frontend
+echo "VITE_API_BASE_URL=https://api.yourdomain.com/api/v1" > .env.production
+npm install && npm run build
+```
+
+**Step 7 — Configure nginx + SSL:**
+```bash
+sudo cp infra/nginx/agencyos.conf /etc/nginx/sites-available/agencyos
+sudo sed -i 's/yourdomain.com/YOURACTUALDOMAIN.com/g' /etc/nginx/sites-available/agencyos
+sudo ln -s /etc/nginx/sites-available/agencyos /etc/nginx/sites-enabled/agencyos
+# DNS A records must be live before running certbot:
+sudo certbot --nginx -d app.domain.com -d api.domain.com
+sudo systemctl enable nginx && sudo systemctl reload nginx
+```
+
+**Step 8 — Verify production:**
+```bash
+curl https://api.yourdomain.com/health          # → {"status":"ok","env":"production"}
+curl -I https://app.yourdomain.com              # → HTTP/2 200
+docker ps                                        # All 3 containers running
+docker logs agencyos_api --tail=20              # No errors
+```
+
+### Updating production
+
+```bash
+cd /opt/agencyos
+git pull origin main
+
+# Rebuild and restart backend
+cd infra
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+
+# Apply any new migrations
+docker exec agencyos_api alembic upgrade head
+
+# Rebuild frontend if changed
+cd /opt/agencyos/frontend
+npm run build
+# nginx serves new dist/ immediately
+```
+
+---
+
+## 11. Environment Variables Reference
+
+| Variable | Required | Description |
+|---|---|---|
+| `APP_ENV` | Yes | `development` or `production` |
+| `SECRET_KEY` | Yes | JWT signing key — 64+ random characters |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | No | Default: 60 |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | No | Default: 7 |
+| `SUPERADMIN_EMAIL` | Yes | SuperAdmin login email |
+| `SUPERADMIN_PASSWORD` | Yes | SuperAdmin login password |
+| `DATABASE_URL` | Yes | PostgreSQL connection string (asyncpg) |
+| `REDIS_URL` | Yes | Redis connection URL |
+| `QDRANT_HOST` | Yes | Qdrant server hostname or IP |
+| `QDRANT_PORT` | No | Default: 6333 |
+| `ANTHROPIC_API_KEY` | For AI features | Claude API key — get from console.anthropic.com |
+| `GMAIL_CLIENT_ID` | For email | Google OAuth client ID |
+| `GMAIL_CLIENT_SECRET` | For email | Google OAuth client secret |
+| `GMAIL_REDIRECT_URI` | For email | OAuth callback URL |
+| `WATI_API_KEY` | For WhatsApp | WATI API key |
+| `WATI_BASE_URL` | For WhatsApp | e.g. `https://live-server.wati.io` |
+| `HUBSPOT_ACCESS_TOKEN` | For M2/M7 | HubSpot private app token |
+| `SLACK_BOT_TOKEN` | For alerts | Slack bot OAuth token |
+| `SLACK_DEFAULT_CHANNEL` | For alerts | e.g. `#agency-os-alerts` |
+| `BUFFER_ACCESS_TOKEN` | For M5/M11 | Buffer API access token |
+| `BUFFER_DEFAULT_PROFILE_ID` | For M5/M11 | Default Buffer social profile |
+| `SERPAPI_KEY` | For M6 | SerpAPI key for Google data |
+| `N8N_BASE_URL` | For webhooks | n8n instance URL |
+| `N8N_WEBHOOK_SECRET` | For webhooks | Secret to validate n8n calls |
+| `ALLOWED_ORIGINS` | Yes | CORS origins (comma-separated) |
+
+**Note on stubs:** Every external API (Gmail, WATI, HubSpot, Buffer, Meta, Google Ads, SerpAPI) has a stub fallback. If the credential is empty in `.env`, the system logs a `[STUB]` warning and continues. This means you can test the entire platform without configuring any external APIs.
+
+---
+
+## 12. Database Schema Overview
+
+### Core tables (always present)
+
+| Table | Purpose |
+|---|---|
+| `agencies` | One row per paying agency tenant |
+| `agency_modules` | Which modules are active per agency |
+| `users` | All users across all roles (superadmin has no DB row) |
+| `employees` | Extended profile for employee-role users |
+| `clients` | Client companies managed by each agency |
+
+### M1 tables
+
+| Table | Purpose |
+|---|---|
+| `geofence_zones` | Office locations with lat/lon + radius |
+| `attendance_sessions` | Clock-in/out events with GPS and hours |
+| `tasks` | Owner-to-employee task assignments |
+| `task_status_history` | Immutable audit log of every task status change |
+| `payroll_runs` | One payroll calculation per month per agency |
+| `payslips` | One payslip per employee per run, with PDF path |
+| `communication_logs` | Every email and WhatsApp message sent/received |
+
+### M2 tables
+
+| Table | Purpose |
+|---|---|
+| `onboarding_flows` | Tracks each client's onboarding process |
+| `onboarding_steps` | Individual node logs within an onboarding flow |
+| `invoices` | Invoices with line items, GST, PDF path |
+
+### M3 tables
+
+| Table | Purpose |
+|---|---|
+| `client_report_configs` | Reporting schedule + platform credentials per client |
+| `reports` | Generated reports with raw metrics, narrative, PDF |
+
+### M4 tables
+
+| Table | Purpose |
+|---|---|
+| `churn_alerts` | Raised when client risk score crosses threshold |
+
+### M5 tables
+
+| Table | Purpose |
+|---|---|
+| `campaigns` | Marketing campaigns per client |
+| `campaign_tasks` | Individual content deliverables within campaigns |
+
+### M6 tables
+
+| Table | Purpose |
+|---|---|
+| `tracked_competitors` | Competitors to monitor per client |
+| `research_briefs` | AI-generated competitive intelligence, stored in Qdrant |
+
+### M7 tables
+
+| Table | Purpose |
+|---|---|
+| `icp_profiles` | Agency's Ideal Client Profile definition |
+| `leads` | Inbound and manually added leads |
+| `lead_scores` | Claude's ICP scoring result per lead |
+
+### M8 tables
+
+| Table | Purpose |
+|---|---|
+| `outreach_sequences` | Multi-step outreach campaign per lead |
+| `outreach_steps` | Individual messages within a sequence |
+
+### M9 tables
+
+| Table | Purpose |
+|---|---|
+| `abm_accounts` | High-priority target accounts with journey state |
+| `abm_touches` | Every interaction logged with channel and outcome |
+| `abm_account_notes` | Free-text notes on an account |
+
+### M10 tables
+
+| Table | Purpose |
+|---|---|
+| `optimisation_configs` | Mode (advisory/autonomous) and guardrails per client |
+| `optimisation_runs` | One analysis cycle per client |
+| `optimisation_recommendations` | Individual change recommendations per run |
+| `predictive_alerts` | End-of-month KPI miss predictions |
+
+### M11 tables
+
+| Table | Purpose |
+|---|---|
+| `content_briefs` | Structured creative brief |
+| `content_drafts` | AI-generated draft variations per brief |
+| `client_approval_requests` | Approval tracking per draft |
+
+---
+
+## 13. API Reference
+
+All endpoints are prefixed with `/api/v1`. Swagger UI is available at `http://localhost:8000/docs` in development.
+
+### Authentication
+
+All endpoints except login/refresh require a Bearer token:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+### Auth endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/login` | None | Login for all 4 roles |
+| POST | `/auth/refresh` | None | Refresh access token |
+
+### SuperAdmin endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/superadmin/agencies` | SuperAdmin | Create agency + owner |
+| GET | `/superadmin/agencies` | SuperAdmin | List all agencies |
+
+### Employee management
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/employees` | Owner | Create employee |
+| GET | `/employees` | Owner | List all employees |
+| GET | `/employees/me` | Employee | Own profile |
+| GET | `/employees/{id}` | Owner | Single employee |
+| PUT | `/employees/{id}` | Owner | Update employee |
+| DELETE | `/employees/{id}` | Owner | Deactivate employee |
+
+### Client management
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/clients` | Owner | Create client |
+| GET | `/clients` | Owner | List all clients |
+| GET | `/clients/{id}` | Owner | Single client |
+| PUT | `/clients/{id}` | Owner | Update client |
+| DELETE | `/clients/{id}` | Owner | Churn client (soft delete) |
+
+### Attendance (M1)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/attendance/clock-in` | Employee | Clock in with GPS |
+| POST | `/attendance/clock-out` | Employee | Clock out |
+| GET | `/attendance/today` | Employee | Today's session status |
+| GET | `/attendance/my-sessions` | Employee | Own history |
+| GET | `/attendance/team` | Owner | All employees' attendance |
+| POST | `/geofence/zones` | Owner | Create zone |
+| GET | `/geofence/zones` | Owner | List zones |
+| PUT | `/geofence/zones/{id}` | Owner | Update zone |
+| DELETE | `/geofence/zones/{id}` | Owner | Deactivate zone |
+
+### Tasks (M1)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/tasks` | Owner | Create task |
+| GET | `/tasks` | Owner | List all tasks |
+| GET | `/tasks/my` | Employee | Own tasks |
+| GET | `/tasks/{id}` | Owner+Employee | Task detail |
+| PATCH | `/tasks/{id}/status` | Employee | Move task forward |
+| PATCH | `/tasks/{id}/verify` | Owner | Verify or reject |
+| PUT | `/tasks/{id}` | Owner | Edit task metadata |
+| DELETE | `/tasks/{id}` | Owner | Delete task |
+
+### Payroll (M1)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/payroll/runs` | Owner | Trigger payroll run |
+| GET | `/payroll/runs` | Owner | List all runs |
+| GET | `/payroll/runs/{id}` | Owner | Run with payslips |
+| POST | `/payroll/runs/{id}/approve` | Owner | Approve and generate PDFs |
+| GET | `/payroll/payslips/my` | Employee | Own payslips |
+| GET | `/payroll/payslips/{id}/pdf` | Owner+Employee | Download PDF |
+
+*(Full reference continues for M2-M11 endpoints — all visible in Swagger)*
+
+---
+
+## 14. Testing Guide
+
+### Testing without any API keys
+
+The entire platform can be tested without a single external API credential. Every integration stubs gracefully:
+
+| Integration | Stub behaviour |
+|---|---|
+| Gmail | Logs `[GMAIL STUB]` to console, marks message as sent |
+| WATI | Logs `[WATI STUB]` to console |
+| Slack | Logs `[SLACK STUB]` to console |
+| Buffer | Returns fake post ID, marks task as scheduled |
+| Meta Ads | Returns realistic sample data |
+| Google Ads | Returns realistic sample data |
+| GA4 | Returns realistic sample data |
+| SerpAPI | Returns realistic stub search results |
+| Claude | Requires `ANTHROPIC_API_KEY` — no stub for AI features |
+| HubSpot | Logs `[HubSpot STUB]` to console |
+
+### End-to-end test flow
+
+Follow this sequence to test every module:
+
+**Preparation (5 minutes):**
+```
+1. Login as superadmin → create agency with all modules [M1-M11]
+2. Login as owner → create a geofence zone (Settings)
+3. Create 2 employees
+4. Create 3 clients
+```
+
+**M1 — Attendance:**
+```
+5. Login as employee → Attendance page → Clock In (allow location)
+6. Owner → Team → Live Attendance → employee shows as Clocked In
+7. Employee → Clock Out
+8. Owner → Team → Today's attendance shows session with hours
+```
+
+**M1 — Tasks:**
+```
+9. Owner → create task assigned to employee, set deadline = tomorrow
+10. Employee → My Tasks → see task → click "Start Task" → status: in_progress
+11. Employee → "Submit for Review" → status: submitted
+12. Owner → Tasks → click "Verify" → verified
+```
+
+**M1 — Payroll:**
+```
+13. Owner → Financial → "Run Payroll" → select current month
+14. Payroll run created showing calculated pay per employee
+15. Owner → "Approve & Generate PDFs"
+16. Employee → Payslips → see their payslip → Download PDF
+```
+
+**M2 — Onboarding:**
+```
+17. Owner → Clients → click a client → "Trigger Onboarding"
+18. Wait ~15 seconds → check onboarding status
+19. Should show 4 steps: generate_brief, send_email, update_crm, notify_am
+20. client_brief field shows Claude's generated text (requires ANTHROPIC_API_KEY)
+```
+
+**M2 — Invoices:**
+```
+21. Owner → Financial → Invoices → "New Invoice"
+22. Add client, line items, 18% GST
+23. Invoice created → Download PDF → professional invoice renders
+```
+
+**M3 — Reports:**
+```
+24. Owner → Reports → configure report for a client (M3 config)
+25. "Generate Report" → select client, date range
+26. Wait ~20 seconds → status changes to delivered
+27. Report shows metrics (sample data if no ad credentials)
+28. Claude's narrative appears in report
+29. Download PDF → branded report with KPI cards and narrative
+```
+
+**M4 — Churn:**
+```
+30. Owner → Churn → "Scan" → select a client
+31. Agent evaluates signals and produces risk score
+32. If score ≥ 40: alert appears in /churn/alerts
+33. Owner → resolve alert with note
+```
+
+**M5 — Campaigns:**
+```
+34. Owner → Campaigns → "New Campaign" for a client
+35. Add campaign task → assign to employee
+36. Employee → Campaign Tasks → move through status pipeline
+37. Owner → Approve task → Buffer scheduling triggered (stub)
+```
+
+**M6 — Research:**
+```
+38. Owner → Research → add competitor for a client
+39. "Run Research" → wait ~30 seconds
+40. Brief appears with competitive intelligence sections
+41. Key findings from Claude visible
+42. Qdrant should have new vector: curl http://QDRANT_IP:6333/collections/research_briefs
+```
+
+**M7 — Leads:**
+```
+43. Owner → Leads → define ICP (plain language description)
+44. "Add Lead" → fill in company details, pain points
+45. Wait ~15 seconds → score appears (requires ANTHROPIC_API_KEY)
+46. Lead sorted by score in the leads list
+```
+
+**M8 — Outreach:**
+```
+47. Owner → Outreach → "Create Sequence" → select high-score lead
+48. Wait ~20 seconds → 3-step sequence generated by Claude
+49. View step 1 body — should reference competitor intel from M6
+50. In manual mode: approve step → "Send Next" → stub logs email
+```
+
+**M9 — ABM:**
+```
+51. Owner → ABM → "Add Account" → enter company details
+52. "Orchestrate" → agent runs in background
+53. After ~20 seconds: touch logged, stage advanced to "researching"
+54. Run orchestrate again → LinkedIn message generated
+55. Log a manual inbound touch with outcome "replied"
+56. Account auto-advances to "engaged"
+```
+
+**M10 — Optimisation:**
+```
+57. Owner → Optimisation → configure for a client (advisory mode)
+58. "Trigger Run" → wait ~20 seconds
+59. 3 recommendations appear sorted by confidence score
+60. Owner selects 2 recommendations → "Approve Selected"
+61. Execution runs (stubs ad APIs if no credentials)
+```
+
+**M11 — Content:**
+```
+62. Owner → Content → "New Brief" → fill in details
+63. "Generate Drafts" → wait ~30 seconds → 3 variations appear
+64. Review the different Claude-written angles
+65. Submit one for client approval
+66. Client logs in → /client/approvals → clicks Approve
+67. Buffer scheduling triggered (stub), status → published
+```
+
+---
+
+## 15. Debugging Guide
+
+### Reading logs
+
+**FastAPI logs (development):**
+```bash
+# uvicorn outputs to terminal. Look for:
+# INFO:     POST /api/v1/... 200 OK  ← successful request
+# ERROR:    ... ← Python exception (full traceback follows)
+# WARNING:  [GMAIL STUB] ...         ← stub being used
+# WARNING:  [SLACK STUB] ...         ← stub being used
+```
+
+**FastAPI logs (production):**
+```bash
+docker logs agencyos_api --tail=100 -f
+docker logs agencyos_api --since=1h     # last hour only
+```
+
+**Celery worker logs:**
+```bash
+# Development: look at Terminal 2 (celery worker)
+# Successful task:
+# [2026-04-13 09:00:01,234: INFO/MainProcess] Task app.tasks.m1_tasks.send_deadline_reminders succeeded in 0.4s
+#
+# Failed task:
+# [2026-04-13 09:00:01,234: ERROR/MainProcess] Task failed: ZeroDivisionError ...
+
+# Production:
+docker logs agencyos_celery_worker --tail=100 -f
+```
+
+**Celery Beat logs:**
+```bash
+docker logs agencyos_celery_beat --tail=50
+# Should show: "beat: Scheduler: Sending due task m1-flag-incomplete-sessions"
+```
+
+### Common debugging scenarios
+
+**"I get 401 Unauthorized on every request"**
+```
+Cause: Token expired or not set.
+Fix:
+1. Log in again via POST /auth/login
+2. Copy the new access_token
+3. In Swagger: click Authorize → paste new token
+4. In React: check localStorage for 'agencyos-auth' key
+   - Open DevTools → Application → Local Storage → localhost:5173
+   - If 'agencyos-auth' shows expired token: log out and log in again
+```
+
+**"I get 403 Module M3 is not active"**
+```
+Cause: The module hasn't been activated for this agency.
+Fix:
+1. Log in as superadmin
+2. Go to /superadmin/agencies → find the agency
+3. Or directly in PostgreSQL:
+   INSERT INTO agency_modules (id, agency_id, module_code, is_active, activated_at, activated_by)
+   VALUES (gen_random_uuid(), '<agency_id>', 'M3', true, now(), 'superadmin');
+```
+
+**"Celery task not running"**
+```
+Fix 1: Check worker is running and queue is correct
+  docker exec agencyos_celery_worker celery -A celery_worker.celery_app inspect active_queues
+  # Should list: m1, m2, m3, etc.
+
+Fix 2: Manually trigger the task
+  docker exec agencyos_celery_worker python -c "
+  from celery_worker import celery_app
+  result = celery_app.send_task('app.tasks.m1_tasks.flag_incomplete_sessions')
+  print(result.id)"
+
+Fix 3: Check Redis connection
+  docker exec agencyos_celery_worker python -c "
+  import redis; r=redis.from_url('redis://REDIS_IP:6379'); print(r.ping())"
+```
+
+**"Alembic migration failed"**
+```
+Fix 1: Check database connection
+  python -c "
+  import asyncio
+  from app.database import engine
+  async def t():
+      async with engine.connect() as c:
+          print('Connected')
+  asyncio.run(t())"
+
+Fix 2: Check for conflicting migration
+  alembic history --verbose
+  alembic current
+
+Fix 3: If migration partially applied
+  alembic downgrade -1   # roll back one step
+  # fix the issue in models
+  alembic revision --autogenerate -m "fix migration"
+  alembic upgrade head
+
+Fix 4: Nuclear option (development only — destroys all data)
+  alembic downgrade base
+  alembic upgrade head
+```
+
+**"LangGraph agent hung / not completing"**
+```
+Fix 1: Check Anthropic API key
+  python -c "
+  import anthropic
+  c = anthropic.Anthropic(api_key='your-key')
+  r = c.messages.create(model='claude-haiku-4-5', max_tokens=10, messages=[{'role':'user','content':'hi'}])
+  print(r.content)"
+
+Fix 2: Add print statements to node functions
+  # In the agent file, each node starts with:
+  logger.info("[AgentName] Running node X for %s", state["client_name"])
+  # Watch FastAPI terminal to trace which node last ran
+
+Fix 3: Check state is being passed correctly
+  # LangGraph nodes must return state — ensure every node ends with:
+  return state
+```
+
+**"Clock-in denied — not within any zone"**
+```
+Causes + fixes:
+1. No zones configured → Owner must create at least one geofence zone
+2. Wrong coordinates → Check zone lat/lon is correct
+   Test: curl https://api.domain.com/api/v1/geofence/zones (as owner)
+3. GPS accuracy issue → Employee should be on WiFi not mobile data for better GPS
+4. Radius too small → Increase radius_metres to 200-500 for real offices
+5. Test the Haversine calculation manually:
+   python -c "
+   from app.core.geofence import haversine_distance
+   dist = haversine_distance(EMPLOYEE_LAT, EMPLOYEE_LON, ZONE_LAT, ZONE_LON)
+   print(f'Distance: {dist:.0f}m')"
+```
+
+**"WeasyPrint PDF generation failed"**
+```
+Cause: Missing system library
+Fix:
+  # On Mac (dev):
+  brew install cairo pango gdk-pixbuf libffi
+  pip install weasyprint
+
+  # On Ubuntu (production):
+  sudo apt install libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi8
+
+  # Test:
+  python -c "from weasyprint import HTML; HTML(string='<p>Test</p>').write_pdf('/tmp/test.pdf'); print('OK')"
+```
+
+**"Qdrant search returns no results"**
+```
+Fix 1: Check Qdrant has data
+  curl http://QDRANT_IP:6333/collections/research_briefs
+  # Look for "points_count" > 0
+
+Fix 2: Collection might not exist yet
+  # Run at least one research scan first (M6)
+  # Collection is auto-created on first store_point() call
+
+Fix 3: Check embedding is working
+  python -c "
+  import asyncio
+  from app.core.vector_store import get_embedding
+  async def t():
+      emb = await get_embedding('test query')
+      print(f'Embedding dims: {len(emb)}')
+  asyncio.run(t())"
+  # Should print: Embedding dims: 768
+```
+
+### Useful debugging commands
+
+```bash
+# Check all tables exist
+docker exec -it <postgres_container> psql -U agencyos_user -d agencyos -c "\dt"
+
+# Count rows in key tables
+docker exec -it <postgres_container> psql -U agencyos_user -d agencyos -c "
+SELECT 'agencies' as tbl, count(*) from agencies
+UNION ALL SELECT 'users', count(*) from users
+UNION ALL SELECT 'employees', count(*) from employees
+UNION ALL SELECT 'clients', count(*) from clients
+UNION ALL SELECT 'tasks', count(*) from tasks
+UNION ALL SELECT 'attendance_sessions', count(*) from attendance_sessions;"
+
+# Check which modules are active for each agency
+docker exec -it <postgres_container> psql -U agencyos_user -d agencyos -c "
+SELECT a.name, am.module_code, am.is_active
+FROM agencies a
+JOIN agency_modules am ON am.agency_id = a.id
+ORDER BY a.name, am.module_code;"
+
+# Check Redis queue depths
+redis-cli -h REDIS_IP llen celery    # default queue
+redis-cli -h REDIS_IP llen m1        # M1 queue
+
+# Check Qdrant collections
+curl http://QDRANT_IP:6333/collections | python3 -m json.tool
+
+# View Celery scheduled tasks
+celery -A celery_worker.celery_app inspect scheduled
+```
+
+---
+
+## 16. Celery Tasks Reference
+
+All scheduled times are in IST (UTC+5:30).
+
+| Task name | Schedule | Queue | What it does |
+|---|---|---|---|
+| `m1_tasks.flag_incomplete_sessions` | Daily 23:00 IST | m1 | Finds open attendance sessions from today, marks incomplete, notifies owner |
+| `m1_tasks.send_deadline_reminders` | Daily 09:00 IST | m1 | Tasks due within 24h that aren't submitted — reminds employee |
+| `m1_tasks.escalate_overdue_tasks` | Every hour | m1 | Tasks past deadline in created/in_progress — marks overdue, alerts owner |
+| `m1_tasks.audit_communications` | Daily 02:00 IST | agents | Claude scans today's outbound messages for compliance violations |
+| `m3_tasks.run_scheduled_reports` | Daily 08:00 IST | m3 | Checks which clients are due a report, runs ReportingAgent for each |
+| `m3_tasks.schedule_report_followup` | 48h after delivery | m3 | If no client reply, drafts follow-up nudge for AM |
+| `m4_tasks.run_churn_scan` | Daily 07:00 IST | m4 | Runs ChurnRiskAgent for every active client in M4-enabled agencies |
+| `m6_tasks.run_research_scan` | Monday 06:00 IST | m6 | Generates competitive intelligence for all tracked competitors |
+| `m7_tasks.score_unscored_leads` | Every hour | m7 | Finds leads with status=new and runs LeadScoringAgent |
+| `m8_tasks.send_scheduled_steps` | Every hour | m8 | Sends outreach sequence steps that are due and approved |
+| `m9_tasks.run_abm_weekly_review` | Monday 07:00 IST | m9 | Reviews stale ABM accounts and runs orchestration |
+| `m10_tasks.run_daily_optimisation` | Daily 10:00 IST | m10 | Runs OptimisationAgent for all clients with M10 config |
+| `m10_tasks.run_trajectory_monitor` | Daily 18:00 IST | m10 | Projects end-of-month performance, raises PredictiveAlerts |
+| `m11_tasks.send_approval_reminders` | Every 6 hours | m11 | Nudges clients who haven't responded to content approval requests |
+
+**Manually triggering any task:**
+```bash
+# Development
+celery -A celery_worker.celery_app call app.tasks.m1_tasks.flag_incomplete_sessions
+
+# Or via Python
+python -c "
+from celery_worker import celery_app
+celery_app.send_task('app.tasks.m3_tasks.run_scheduled_reports')
+print('Task queued')"
+```
+
+---
+
+## 17. LangGraph Agents Reference
+
+| Agent | Module | Nodes | Trigger |
+|---|---|---|---|
+| EOM Scoring Agent | M1 | task_data_aggregation → sentiment_scoring → score_combination → narrative_generation → owner_notification | 1st of month 02:00 IST |
+| Communication Audit Agent | M1 | scan_messages → claude_evaluation → flag_violations | Daily 02:00 IST |
+| Onboarding Orchestration Agent | M2 | generate_brief → send_email → update_crm → notify_am | HubSpot webhook or manual trigger |
+| Reporting Agent | M3 | pull_data → process_metrics → generate_narrative → assemble_pdf → deliver → monitor_reply | Scheduled or manual |
+| Churn Risk Agent | M4 | fetch_signals → score_risk → enrich_with_research → generate_alert → notify | Daily 07:00 IST or manual |
+| Competitive Research Agent | M6 | fetch_competitor_ads → fetch_serp_data → synthesise_brief → store_vectors → deliver | Weekly Monday or manual |
+| Lead Scoring Agent | M7 | intake_lead → fetch_context → score_against_icp → write_back_hubspot → create_task → notify | On lead creation or hourly |
+| Outreach Personalisation Agent | M8 | retrieve_context → generate_messages → create_sequence → send_first_step → monitor_replies | Manual trigger per lead |
+| ABM Orchestration Agent | M9 | evaluate_state → recommend_next_touch → generate_content → route_channel → log_touch → update_journey | Weekly or manual per account |
+| Campaign Optimisation Agent | M10 | pull_live_data → analyse_gaps → generate_recommendations → get_approval → execute_changes → confirm | Daily 10:00 IST or manual |
+| Content Generation Agent | M11 | parse_brief → generate_drafts → create_approval_requests → notify_client → monitor_response | Manual trigger per brief |
+
+**All agents write their state to PostgreSQL at each node** — if an agent fails mid-run, you can inspect the DB to see exactly which node it completed last. For example, an `OnboardingFlow` row has a `last_completed_node` field that shows the last successful step.
+
+**Viewing agent run logs in production:**
+```bash
+# Search FastAPI logs for a specific agent
+docker logs agencyos_api 2>&1 | grep "\[Onboarding\]"
+docker logs agencyos_api 2>&1 | grep "\[Lead\]"
+docker logs agencyos_api 2>&1 | grep "\[Content\]"
+```
+
+---
+
+## 18. n8n Webhook Setup
+
+n8n routes external events to FastAPI. Here are the webhooks you need to configure in your n8n instance:
+
+### HubSpot deal closed → Onboarding (M2)
+
+```
+Trigger: HubSpot trigger → Deal stage changed to "Closed Won"
+Action: HTTP Request
+  Method: POST
+  URL: https://api.yourdomain.com/api/v1/m2/webhooks/hubspot
+  Body (JSON):
+    {
+      "agency_id": "{{$json.properties.agency_id}}",
+      "deal_id": "{{$json.id}}",
+      "company_name": "{{$json.properties.dealname}}",
+      "contact_email": "{{$json.properties.email}}",
+      "contact_name": "{{$json.properties.contact_name}}",
+      "deal_notes": "{{$json.properties.description}}"
+    }
+```
+
+### HubSpot form fill → Lead scoring (M7)
+
+```
+Trigger: HubSpot trigger → Form submission
+Action: HTTP Request
+  Method: POST
+  URL: https://api.yourdomain.com/api/v1/m7/webhooks/hubspot-lead
+  Body:
+    {
+      "agency_id": "HARDCODE_YOUR_AGENCY_UUID",
+      "full_name": "{{$json.properties.firstname}} {{$json.properties.lastname}}",
+      "email": "{{$json.properties.email}}",
+      "company_name": "{{$json.properties.company}}",
+      "industry": "{{$json.properties.industry}}",
+      "monthly_ad_budget": "{{$json.properties.monthly_budget}}",
+      "hubspot_contact_id": "{{$json.id}}"
+    }
+```
+
+### Gmail polling → Communication logging
+
+```
+Trigger: Schedule trigger → every 15 minutes
+Action: Google Gmail → Get many messages (unread, last 15 min)
+  For each message:
+    HTTP Request:
+      Method: POST
+      URL: https://api.yourdomain.com/api/v1/communications/webhooks/gmail
+      Body:
+        {
+          "gmail_message_id": "{{$json.id}}",
+          "from_email": "{{$json.from}}",
+          "subject": "{{$json.subject}}",
+          "body": "{{$json.body}}"
+        }
+```
+
+### WATI inbound WhatsApp
+
+```
+In your WATI dashboard:
+  Webhook URL: https://api.yourdomain.com/api/v1/communications/webhooks/wati
+  (WATI calls this directly — no n8n needed)
+```
+
+### WhatsApp content approval
+
+```
+Trigger: WATI webhook → message received (via n8n)
+Condition: message contains "APPROVE" or "REJECT"
+Action: HTTP Request
+  Method: POST
+  URL: https://api.yourdomain.com/api/v1/m11/webhooks/approval
+  Body:
+    {
+      "from_phone": "{{$json.waId}}",
+      "message": "{{$json.text.body}}"
+    }
+```
+
+---
+
+## 19. Adding a New Agency (Step by Step)
+
+This is the full onboarding flow for a new paying agency client:
+
+### Step 1 — SuperAdmin creates the agency
+
+In Swagger or via the SuperAdmin dashboard:
+
+```
+POST /api/v1/superadmin/agencies
+{
+  "agency_name": "Pixel Perfect Media",
+  "owner_full_name": "Neha Gupta",
+  "owner_email": "neha@pixelperfect.in",
+  "owner_password": "SecurePass@2026",
+  "plan_tier": "starter",
+  "modules_to_activate": ["M1", "M2", "M3"]
+}
+```
+
+Response includes:
+- `agency_id` — the UUID for this tenant
+- `owner_user_id` — Neha's user ID
+- `modules_activated` — ["M1", "M2", "M3"]
+
+### Step 2 — Owner logs in and configures basics
+
+Neha logs in at `https://app.yourdomain.com` with her credentials.
+
+**She should do in order:**
+
+1. **Create geofence zones** (Settings or owner/settings page)
+   - Name: "Main Office"
+   - Latitude/Longitude: her office coordinates
+   - Radius: 100-200 metres
+
+2. **Add employees** (Team page → Add Employee)
+   - For each team member: name, email, password, designation, compensation
+
+3. **Add clients** (Clients page → Add Client)
+   - Company name, contact person, email, assign account manager
+
+4. **Configure M3 reporting** (Reports page → Configure)
+   - For each client: schedule (weekly/monthly), platforms, KPI targets
+
+### Step 3 — Employees clock in and work
+
+Employees log in at `https://app.yourdomain.com` with their credentials.
+
+Day 1 checklist for each employee:
+- Go to Attendance page
+- Click "Clock In" — allow browser to access location
+- Verify they're within the geofence zone
+- Check My Tasks page for assigned tasks
+
+### Step 4 — Activating more modules
+
+When Neha pays for M4, SuperAdmin activates it:
+
+```sql
+-- Via Swagger:
+-- SuperAdmin → module control (currently manual SQL in Phase 17, UI in SuperAdmin dashboard)
+INSERT INTO agency_modules (id, agency_id, module_code, is_active, activated_at, activated_by)
+VALUES (gen_random_uuid(), 'AGENCY_UUID_HERE', 'M4', true, now(), 'superadmin');
+```
+
+Or via the SuperAdmin Modules page in the React dashboard (toggle matrix).
+
+The module is live immediately — no restart, no deployment.
+
+---
+
+## 20. Common Issues and Fixes
+
+### "CORS error in browser"
+
+```
+Cause: ALLOWED_ORIGINS in .env doesn't include your frontend URL.
+Fix: Add your frontend URL to ALLOWED_ORIGINS:
+  ALLOWED_ORIGINS=http://localhost:5173,https://app.yourdomain.com
+  # Restart FastAPI after changing .env
+```
+
+### "Alembic can't find models"
+
+```
+Cause: Model not imported in app/models/__init__.py
+Fix: Add the import to __init__.py:
+  from app.models.yourmodel import YourModel  # noqa: F401
+  # Add to __all__ list too
+  # Then: alembic revision --autogenerate -m "add your model"
+```
+
+### "JWT token expired immediately"
+
+```
+Cause: Server clock is out of sync with client.
+Fix:
+  sudo timedatectl set-ntp true
+  # Or explicitly set timezone:
+  sudo timedatectl set-timezone Asia/Kolkata
+```
+
+### "Celery Beat not running scheduled tasks"
+
+```
+Cause 1: Beat not started (forgot to run it).
+Fix: Start it: celery -A celery_worker.celery_app beat --loglevel=info
+
+Cause 2: Stale beat schedule file.
+Fix: Delete /tmp/celerybeat-schedule and restart Beat.
+
+Cause 3: Task not registered in beat_schedule dict in celery_worker.py.
+Fix: Check celery_worker.py beat_schedule has the task name exactly matching
+     the @celery_app.task name= parameter.
+```
+
+### "React Query not refreshing data"
+
+```
+Fix 1: Invalidate the query after mutation:
+  const qc = useQueryClient()
+  // In onSuccess:
+  qc.invalidateQueries({ queryKey: ['your-query-key'] })
+
+Fix 2: Check the queryKey matches exactly:
+  // These are different queries:
+  useQuery({ queryKey: ['tasks'] })
+  useQuery({ queryKey: ['tasks', userId] })
+```
+
+### "Employee can access owner data"
+
+```
+Cause: Missing role check in endpoint.
+Fix: Ensure endpoint uses require_owner (not require_employee):
+  async def endpoint(current_user: Annotated[User, Depends(require_owner)]):
+  # require_owner allows SuperAdmin + Owner
+  # require_employee allows SuperAdmin + Owner + Employee
+```
+
+### "WeasyPrint generates blank PDF"
+
+```
+Cause: HTML template path incorrect.
+Fix: Check TEMPLATES_DIR in app/core/pdf.py resolves correctly:
+  python -c "
+  from app.core.pdf import TEMPLATES_DIR
+  import os
+  print(TEMPLATES_DIR)
+  print(os.listdir(TEMPLATES_DIR))"
+  # Should show: payslip.html, invoice.html, report.html
+```
+
+### "n8n can't reach FastAPI"
+
+```
+Development: n8n (on homelab) needs to reach your Mac's FastAPI.
+Fix:
+  1. Find Mac's Tailscale IP: tailscale ip -4
+  2. Allow traffic: sudo ufw allow in on tailscale0 to any port 8000
+  3. In n8n webhook URL, use: http://MAC_TAILSCALE_IP:8000/api/v1/...
+  4. Test: curl http://MAC_TAILSCALE_IP:8000/health (from homelab)
+```
+
+---
+
+## 21. Upgrading and Migrations
+
+### Adding a new model field
+
+```python
+# 1. Add field to the model in models/yourmodel.py
+new_field: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+# 2. Generate migration
+alembic revision --autogenerate -m "add new_field to yourmodel"
+
+# 3. Review the generated migration file in alembic/versions/
+# Make sure it looks correct — Alembic sometimes misses things
+
+# 4. Apply migration
+alembic upgrade head
+
+# 5. If production: run on prod server
+docker exec agencyos_api alembic upgrade head
+```
+
+### Rolling back a migration
+
+```bash
+# Roll back one step
+alembic downgrade -1
+
+# Roll back to specific revision
+alembic downgrade abc123
+
+# Roll back to beginning (development only — destroys all data)
+alembic downgrade base
+```
+
+### Viewing migration history
+
+```bash
+alembic history --verbose
+alembic current   # Shows what version the DB is at
+```
+
+---
+
+## 22. Backup and Recovery
+
+### Daily automated backup
+
+The backup script runs at 02:00 AM via cron:
+
+```bash
+# View backup directory
+ls -lh /opt/agencyos/backups/postgres/
+# Files: agencyos_20260413_020000.sql.gz
+
+# Check backup size (should be > 0)
+du -sh /opt/agencyos/backups/postgres/agencyos_*.sql.gz | tail -5
+```
+
+### Manual backup
+
+```bash
+PGPASSWORD=your_db_password pg_dump \
+  -h DB_HOST -U agencyos_user -d agencyos \
+  --format=plain | gzip > /tmp/manual_backup_$(date +%Y%m%d).sql.gz
+```
+
+### Restore from backup
+
+```bash
+# WARNING: This overwrites the current database
+gunzip < /opt/agencyos/backups/postgres/agencyos_TIMESTAMP.sql.gz | \
+  PGPASSWORD=your_db_password psql \
+  -h DB_HOST -U agencyos_user -d agencyos
+```
+
+### Backing up Qdrant vectors
+
+```bash
+# Create snapshot via Qdrant API
+curl -X POST http://QDRANT_IP:6333/collections/research_briefs/snapshots
+
+# List snapshots
+curl http://QDRANT_IP:6333/collections/research_briefs/snapshots
+
+# Download snapshot
+curl http://QDRANT_IP:6333/collections/research_briefs/snapshots/SNAPSHOT_NAME \
+  --output /opt/agencyos/backups/qdrant/research_briefs.snapshot
+```
+
+### Media files backup (PDFs)
+
+```bash
+# All generated PDFs are in /opt/agencyos/media/
+# Back them up to a separate location:
+tar -czf /opt/agencyos/backups/media_$(date +%Y%m%d).tar.gz \
+  /opt/agencyos/media/
+
+# Or rsync to another machine:
+rsync -avz /opt/agencyos/media/ backup-server:/backup/agencyos-media/
+```
+
+---
+
+## 23. Security Considerations
+
+### What is hardened by design
+
+- **SuperAdmin not in database** — credentials are env vars only. No SQL injection can expose them. No agency owner can enumerate users to find them.
+- **Row-level tenancy** — every query filters by `agency_id`. Cross-tenant data leakage is architecturally prevented.
+- **JWT with refresh rotation** — access tokens expire in 60 minutes. Refresh tokens expire in 7 days.
+- **bcrypt passwords** — cost factor 12 by default. Cannot be reversed.
+- **Docs blocked in production** — `/docs` and `/redoc` return 403 in production.
+- **Rate limiting** — nginx limits login attempts (5/min) and general API calls (30/min).
+- **HTTPS enforced** — nginx redirects all HTTP to HTTPS. HSTS header set.
+
+### What you need to do
+
+1. **Strong SECRET_KEY** — generate with `python -c "import secrets; print(secrets.token_hex(32))"`
+2. **Strong DB password** — at least 20 random characters
+3. **Strong SuperAdmin password** — never share this
+4. **Rotate API keys** if exposed — Anthropic, Gmail OAuth, WATI, HubSpot
+5. **Firewall** — only ports 80, 443 should be open to the internet. All other ports (8000, 5432, 6379, 6333, 5678) should be accessible only via Tailscale
+6. **Tailscale ACLs** — configure Tailscale ACL to allow only app VM → data VM on specific ports
+
+### What to never do
+
+- Never put the SuperAdmin email/password in code or git
+- Never expose the PostgreSQL port (5432) to the internet
+- Never disable HTTPS
+- Never run FastAPI in development mode (`--reload`) in production
+- Never commit `.env` files to git — add to `.gitignore`
+
+---
+
+## 24. Contributing and Code Structure
+
+### Directory structure
+
+```
+agencyos/
+├── backend/
+│   ├── app/
+│   │   ├── agents/          # LangGraph agent files (one per module)
+│   │   │   ├── onboarding_agent.py
+│   │   │   ├── reporting_agent.py
+│   │   │   ├── churn_agent.py
+│   │   │   ├── research_agent.py
+│   │   │   ├── lead_agent.py
+│   │   │   ├── outreach_agent.py
+│   │   │   ├── abm_agent.py
+│   │   │   ├── optimisation_agent.py
+│   │   │   └── content_agent.py
+│   │   ├── api/v1/          # FastAPI route handlers (one per module)
+│   │   │   ├── auth.py
+│   │   │   ├── superadmin.py
+│   │   │   ├── employees.py
+│   │   │   ├── clients.py
+│   │   │   ├── attendance.py
+│   │   │   ├── geofence.py
+│   │   │   ├── tasks.py
+│   │   │   ├── payroll.py
+│   │   │   ├── communications.py
+│   │   │   ├── operations.py   # M2
+│   │   │   ├── reporting.py    # M3
+│   │   │   ├── churn.py        # M4
+│   │   │   ├── campaigns.py    # M5
+│   │   │   ├── research.py     # M6
+│   │   │   ├── leads.py        # M7
+│   │   │   ├── outreach.py     # M8
+│   │   │   ├── abm.py          # M9
+│   │   │   ├── optimisation.py # M10
+│   │   │   ├── content.py      # M11
+│   │   │   └── router.py       # Mounts all routers
+│   │   ├── core/             # Shared utilities
+│   │   │   ├── deps.py         # FastAPI dependencies (auth guards, role checks)
+│   │   │   ├── security.py     # JWT encode/decode, bcrypt
+│   │   │   ├── geofence.py     # Haversine formula
+│   │   │   ├── pdf.py          # WeasyPrint PDF generation
+│   │   │   ├── gmail.py        # Gmail API client
+│   │   │   ├── wati.py         # WATI WhatsApp client
+│   │   │   ├── hubspot.py      # HubSpot CRM client
+│   │   │   ├── buffer.py       # Buffer scheduling client
+│   │   │   ├── ads_data.py     # Meta, Google Ads, GA4 data fetchers
+│   │   │   ├── competitor_data.py # Meta Ad Library, SerpAPI
+│   │   │   ├── ad_execution.py # Autonomous ad changes
+│   │   │   ├── churn_signals.py# Churn risk signal collectors
+│   │   │   └── vector_store.py # Qdrant client + embedding utility
+│   │   ├── models/           # SQLAlchemy ORM models
+│   │   │   ├── base.py         # Base, UUIDMixin, TimestampMixin
+│   │   │   ├── agency.py       # Agency, AgencyModule
+│   │   │   ├── user.py         # User, Employee, Client
+│   │   │   ├── attendance.py   # GeofenceZone, AttendanceSession
+│   │   │   ├── task.py         # Task, TaskStatusHistory
+│   │   │   ├── payroll.py      # PayrollRun, Payslip
+│   │   │   ├── communication.py# CommunicationLog
+│   │   │   ├── operations.py   # OnboardingFlow, OnboardingStep, Invoice
+│   │   │   ├── reporting.py    # ClientReportConfig, Report
+│   │   │   ├── churn.py        # ChurnAlert
+│   │   │   ├── campaign.py     # Campaign, CampaignTask
+│   │   │   ├── research.py     # TrackedCompetitor, ResearchBrief
+│   │   │   ├── leads.py        # IcpProfile, Lead, LeadScore
+│   │   │   ├── outreach.py     # OutreachSequence, OutreachStep
+│   │   │   ├── abm.py          # AbmAccount, AbmTouch, AbmAccountNote
+│   │   │   ├── optimisation.py # OptimisationConfig, Run, Recommendation, Alert
+│   │   │   ├── content.py      # ContentBrief, ContentDraft, ApprovalRequest
+│   │   │   └── __init__.py     # Imports all models for Alembic
+│   │   ├── schemas/          # Pydantic request/response models
+│   │   ├── tasks/            # Celery task files (one per module)
+│   │   ├── templates/        # Jinja2 HTML templates for PDFs
+│   │   │   ├── payslip.html
+│   │   │   ├── invoice.html
+│   │   │   └── report.html
+│   │   ├── config.py         # Pydantic settings (reads .env)
+│   │   ├── database.py       # Async SQLAlchemy engine + session
+│   │   └── main.py           # FastAPI app factory
+│   ├── alembic/              # Database migrations
+│   ├── celery_worker.py      # Celery app definition + beat schedule
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── client.js       # Axios instance with JWT interceptors
+│   │   │   └── modules.js      # All API call functions (one per module)
+│   │   ├── components/
+│   │   │   ├── Layout.jsx      # Sidebar + topbar shell
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   └── ui/             # Reusable UI components
+│   │   │       ├── Card.jsx, StatCard.jsx
+│   │   │       ├── Badge.jsx
+│   │   │       ├── Table.jsx
+│   │   │       ├── Modal.jsx
+│   │   │       ├── PageHeader.jsx
+│   │   │       └── EmptyState.jsx
+│   │   ├── pages/
+│   │   │   ├── Login.jsx
+│   │   │   ├── superadmin/     # Dashboard 0
+│   │   │   ├── owner/          # Dashboard 1 (all module UIs)
+│   │   │   ├── employee/       # Dashboard 2
+│   │   │   └── client/         # Dashboard 3
+│   │   ├── store/
+│   │   │   └── authStore.js    # Zustand auth state (persisted)
+│   │   ├── App.jsx             # Router with all 4 dashboard routes
+│   │   └── main.jsx
+│   └── package.json
+│
+└── infra/
+    ├── docker-compose.homelab.yml  # Data services for homelab
+    ├── docker-compose.prod.yml     # Production app services
+    ├── nginx/
+    │   └── agencyos.conf           # nginx reverse proxy config
+    └── scripts/
+        ├── backup_db.sh
+        └── healthcheck.sh
+```
+
+### Adding a new feature
+
+**New API endpoint:**
+```python
+# 1. Add to models/ if new DB table needed
+# 2. Add to schemas/ for request/response types
+# 3. Add to api/v1/ as a new route file
+# 4. Mount in api/v1/router.py
+# 5. Run alembic revision --autogenerate if new table
+# 6. Add API call to frontend/src/api/modules.js
+# 7. Create the page/component in frontend/src/pages/
+```
+
+**New Celery task:**
+```python
+# 1. Add to app/tasks/mX_tasks.py
+# 2. Register in celery_worker.py include= list
+# 3. Add to beat_schedule if it's scheduled (not just callable)
+```
+
+**New LangGraph agent:**
+```python
+# 1. Create app/agents/new_agent.py
+# 2. Define TypedDict state
+# 3. Write async node functions (each must return state)
+# 4. Build StateGraph: add_node → add_edge → compile()
+# 5. Write runner function: async def run_new_agent(...)
+# 6. Call from API endpoint using background_tasks.add_task()
+```
+
+### Code conventions
+
+- All API endpoints return Pydantic response models — no raw dicts
+- All DB queries filter by `agency_id` before any other condition
+- All endpoints that need a module active use `require_module("MX")` as a dependency
+- All external API calls have a stub fallback that logs a `[NAME STUB]` warning
+- All LangGraph nodes end with `return state` — never modify state in-place without returning
+- All Celery tasks have a sync wrapper (`def task`) that calls `run_async(async_func())`
+- Comments explaining "why" not "what" — the code itself shows what
+
+---
+
+*Agency OS — Built to run on your own hardware, serve multiple agencies, and replace a dozen tools with one.*
+
+*Version 2.0 — Complete documentation*

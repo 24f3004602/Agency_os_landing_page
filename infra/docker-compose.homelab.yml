@@ -1,0 +1,58 @@
+# agencyos/infra/docker-compose.homelab.yml
+# Run this on your HOMELAB to add the new services Agency OS needs.
+# Your existing n8n and Postgres are already running — this adds Redis, Qdrant, Ollama.
+#
+# Usage:
+#   docker compose -f docker-compose.homelab.yml up -d
+
+version: '3.9'
+
+services:
+
+  # ── Redis — Celery broker + result backend ──────────────────────────────────
+  redis:
+    image: redis:7.4-alpine
+    container_name: agencyos_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Qdrant — vector store ───────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.11.3
+    container_name: agencyos_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__LOG_LEVEL: INFO
+
+  # ── Ollama — CPU-based embedding model ─────────────────────────────────────
+  # Runs nomic-embed-text on CPU. 24GB RAM handles this fine.
+  # Pull the model after first start:
+  #   docker exec agencyos_ollama ollama pull nomic-embed-text
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agencyos_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # No GPU flags — CPU only given 4GB VRAM is needed for other things
+
+volumes:
+  redis_data:
+  qdrant_data:
+  ollama_data:

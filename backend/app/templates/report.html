@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      background: #fff;
+      padding: 40px;
+    }
+
+    /* ── Cover header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 24px;
+      border-bottom: 3px solid #4f6ef7;
+      margin-bottom: 32px;
+    }
+    .agency-name { font-size: 22px; font-weight: 700; color: #4f6ef7; }
+    .report-meta { text-align: right; }
+    .report-title { font-size: 18px; font-weight: 700; color: #111827; }
+    .report-period { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .client-name-large {
+      font-size: 15px;
+      font-weight: 600;
+      color: #374151;
+      margin-top: 8px;
+    }
+
+    /* ── Section heading ── */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4f6ef7;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 28px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* ── KPI cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .kpi-card {
+      background: #f8f9fc;
+      border-radius: 10px;
+      padding: 14px 16px;
+      border-left: 3px solid #4f6ef7;
+    }
+    .kpi-card.warning { border-left-color: #f59e0b; }
+    .kpi-card.good { border-left-color: #10b981; }
+    .kpi-label {
+      font-size: 10px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 4px;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* ── Platform table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    thead tr { background: #4f6ef7; color: #fff; }
+    thead th {
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    thead th.right { text-align: right; }
+    tbody tr { border-bottom: 1px solid #f3f4f6; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    tbody td { padding: 9px 12px; color: #374151; }
+    tbody td.right { text-align: right; font-weight: 500; }
+
+    /* ── Narrative ── */
+    .narrative {
+      background: #f8f9fc;
+      border-radius: 10px;
+      padding: 20px 24px;
+      line-height: 1.7;
+      color: #374151;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    /* ── Performance flags ── */
+    .flag {
+      background: #fff7ed;
+      border-left: 3px solid #f59e0b;
+      border-radius: 4px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #92400e;
+    }
+
+    /* ── Stub notice ── */
+    .stub-notice {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 11px;
+      color: #1e40af;
+      margin-bottom: 16px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 32px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="agency-name">{{ agency_name }}</div>
+      <div class="client-name-large">{{ client_name }}</div>
+    </div>
+    <div class="report-meta">
+      <div class="report-title">Performance Report</div>
+      <div class="report-period">{{ period_label }}</div>
+    </div>
+  </div>
+
+  {% if has_stub_data %}
+  <div class="stub-notice">
+    ℹ️ This report uses sample data. Connect your ad platform accounts
+    in Settings to see live metrics.
+  </div>
+  {% endif %}
+
+  <!-- KPI Summary -->
+  <div class="section-title">Overall Performance</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Spend</div>
+      <div class="kpi-value">₹{{ "%.0f"|format(total_spend) }}</div>
+      <div class="kpi-sub">All platforms</div>
+    </div>
+    <div class="kpi-card {{ 'good' if overall_roas >= 3 else 'warning' }}">
+      <div class="kpi-label">Overall ROAS</div>
+      <div class="kpi-value">{{ "%.2f"|format(overall_roas) }}x</div>
+      <div class="kpi-sub">Return on ad spend</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Conversions</div>
+      <div class="kpi-value">{{ total_conversions }}</div>
+      <div class="kpi-sub">Across all platforms</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Platforms</div>
+      <div class="kpi-value">{{ platforms | length }}</div>
+      <div class="kpi-sub">Active this period</div>
+    </div>
+  </div>
+
+  <!-- Per-Platform Breakdown -->
+  {% if platforms %}
+  <div class="section-title">Platform Breakdown</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Platform</th>
+        <th class="right">Spend (₹)</th>
+        <th class="right">Impressions</th>
+        <th class="right">Clicks</th>
+        <th class="right">CTR %</th>
+        <th class="right">CPC (₹)</th>
+        <th class="right">Conversions</th>
+        <th class="right">ROAS</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for platform_key, data in platforms.items() %}
+      {% if data is mapping %}
+      <tr>
+        <td><strong>{{ platform_key | upper | replace("_", " ") }}</strong></td>
+        <td class="right">{{ "%.2f"|format(data.get("spend", 0) or 0) }}</td>
+        <td class="right">{{ "{:,}".format(data.get("impressions", 0) or 0) }}</td>
+        <td class="right">{{ "{:,}".format(data.get("clicks", 0) or 0) }}</td>
+        <td class="right">{{ "%.2f"|format(data.get("ctr", 0) or 0) }}%</td>
+        <td class="right">{{ "%.2f"|format(data.get("cpc", 0) or 0) }}</td>
+        <td class="right">{{ data.get("conversions", 0) or 0 }}</td>
+        <td class="right">{{ "%.2f"|format(data.get("roas", 0) or 0) }}x</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Performance Flags -->
+  {% if performance_flags %}
+  <div class="section-title">Areas of Concern</div>
+  {% for flag in performance_flags %}
+  <div class="flag">⚠ {{ flag }}</div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Narrative -->
+  <div class="section-title">Analysis & Recommendations</div>
+  <div class="narrative">{{ narrative }}</div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>{{ agency_name }} — Confidential Report for {{ client_name }}</span>
+    <span>Generated {{ generated_on }}</span>
+  </div>
+
+</body>
+</html>
