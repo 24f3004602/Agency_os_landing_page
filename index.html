@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgencyOS - AI-Powered Agency Management Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Ambient background effects -->
+    <div class="ambient-bg"></div>
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-wrapper">
+            <div class="navbar-content">
+                <div class="navbar-logo">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                        <rect x="4" y="4" width="8" height="8" fill="#EB5E28"/>
+                        <rect x="16" y="4" width="8" height="8" fill="#CCC5B9"/>
+                        <rect x="4" y="16" width="8" height="8" fill="#CCC5B9"/>
+                        <rect x="16" y="16" width="8" height="8" fill="#EB5E28"/>
+                    </svg>
+                    <span>AgencyOS</span>
+                </div>
+
+                <ul class="nav-menu">
+                    <li><a href="#hero" class="nav-link">Platform</a></li>
+                    <li><a href="#solution" class="nav-link">Problem & Solution</a></li>
+                    <li><a href="#features" class="nav-link">Features</a></li>
+                    <li><a href="#success-journey" class="nav-link">Success Journey</a></li>
+                </ul>
+
+                <div class="nav-actions">
+                    <button class="nav-cta" onclick="scrollToSection('contact')">Start Free</button>
+                </div>
+
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        <div class="navbar-underline"></div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section id="hero" class="hero">
+        <div class="hero-container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <span class="badge-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                <path d="M2 13L6.5 8.5L10 11L16 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M11.5 4H16V8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <span class="badge-text">Trusted by 500+ Agencies Worldwide</span>
+                    </div>
+
+                    <h1 class="hero-title">
+                        Your Agency <span class="gradient-text">Deserves</span> Smarter Operations
+                    </h1>
+
+                    <p class="hero-description">
+                        Transform chaos into clarity. AgencyOS automates workflows, eliminates manual processes, and scales your team's impact 10x without adding overhead.
+                    </p>
+
+                    <div class="hero-ctas">
+                        <button class="btn btn-primary" onclick="scrollToSection('contact')">
+                            <span>Start Free 14-Day Trial</span>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M7 10H13M13 10L10 7M13 10L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-secondary" onclick="scrollToSection('demo')">
+                            <span>Watch Demo</span>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"/>
+                                <path d="M8 6.5L14.5 10L8 13.5V6.5Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <span class="stat-value counter" data-target="40" data-suffix="%">40%</span>
+                            <span class="stat-label">Time Saved</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value counter" data-target="3" data-suffix=" Weeks">3 Weeks</span>
+                            <span class="stat-label">ROI Period</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value counter" data-target="98" data-suffix="%">98%</span>
+                            <span class="stat-label">Satisfaction</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <div class="globe-container" id="globeContainer">
+                        <div class="globe" id="globe">
+                            <div class="globe-inner">
+                                <svg viewBox="0 0 400 400" class="globe-svg">
+                                    <defs>
+                                        <radialGradient id="globeGradient" cx="35%" cy="35%">
+                                            <stop offset="0%" style="stop-color:#fffcf2;stop-opacity:0.3" />
+                                            <stop offset="100%" style="stop-color:#eb5e28;stop-opacity:0.1" />
+                                        </radialGradient>
+                                    </defs>
+                                    
+                                    <!-- Ocean -->
+                                    <circle cx="200" cy="200" r="200" fill="#403d39" opacity="0.5"/>
+                                    
+                                    <!-- Landmasses -->
+                                    <path d="M150,180 Q160,170 180,175 Q190,180 185,195 Q170,200 150,180" fill="#eb5e28" opacity="0.8"/>
+                                    <path d="M220,150 Q240,145 250,160 Q245,175 225,170 Q220,165 220,150" fill="#eb5e28" opacity="0.8"/>
+                                    <path d="M280,200 Q300,195 310,210 Q305,225 285,220 Q280,215 280,200" fill="#eb5e28" opacity="0.8"/>
+                                    <path d="M100,220 Q120,215 125,235 Q115,245 100,240 Q95,230 100,220" fill="#eb5e28" opacity="0.8"/>
+                                    <path d="M200,280 Q220,275 225,295 Q210,305 195,300 Q195,290 200,280" fill="#eb5e28" opacity="0.8"/>
+                                    
+                                    <!-- Connections/Networks -->
+                                    <line x1="150" y1="190" x2="220" y2="160" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
+                                    <line x1="220" y1="160" x2="280" y2="210" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
+                                    <line x1="280" y1="210" x2="200" y2="290" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
+                                    <line x1="200" y1="290" x2="100" y2="230" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
+                                    <line x1="100" y1="230" x2="150" y2="190" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
+                                    
+                                    <!-- Connection nodes -->
+                                    <circle cx="150" cy="190" r="4" fill="#EB5E28"/>
+                                    <circle cx="220" cy="160" r="4" fill="#EB5E28"/>
+                                    <circle cx="280" cy="210" r="4" fill="#EB5E28"/>
+                                    <circle cx="200" cy="290" r="4" fill="#EB5E28"/>
+                                    <circle cx="100" cy="230" r="4" fill="#EB5E28"/>
+                                    
+                                    <!-- Globe shine/gradient -->
+                                    <circle cx="200" cy="200" r="200" fill="url(#globeGradient)"/>
+                                    
+                                    <!-- Grid lines -->
+                                    <circle cx="200" cy="200" r="200" fill="none" stroke="#ccc5b9" stroke-width="1" opacity="0.2"/>
+                                    <circle cx="200" cy="200" r="150" fill="none" stroke="#ccc5b9" stroke-width="1" opacity="0.15"/>
+                                    <circle cx="200" cy="200" r="100" fill="none" stroke="#ccc5b9" stroke-width="1" opacity="0.1"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="globe-glow"></div>
+                    </div>
+
+                    <div class="hero-graphic">
+                        <div class="graphic-card card-1 widget-card">
+                            <div class="widget-title-row">
+                                <span class="widget-title">Weekly Pipeline</span>
+                                <span class="widget-metric" data-count="42">0</span>
+                            </div>
+                            <div class="mini-bars">
+                                <div class="mini-bar" data-height="55"></div>
+                                <div class="mini-bar" data-height="72"></div>
+                                <div class="mini-bar" data-height="64"></div>
+                                <div class="mini-bar" data-height="88"></div>
+                                <div class="mini-bar" data-height="96"></div>
+                            </div>
+                            <p class="widget-caption">Qualified opportunities this week</p>
+                        </div>
+                        <div class="graphic-card card-2 widget-card">
+                            <div class="widget-title-row">
+                                <span class="widget-title">Launch Checklist</span>
+                                <span class="widget-status">Live</span>
+                            </div>
+                            <ul class="task-list">
+                                <li class="task-item"><span class="task-check"></span>Client brief approved</li>
+                                <li class="task-item"><span class="task-check"></span>Assets synced to team</li>
+                                <li class="task-item"><span class="task-check"></span>Automation rules active</li>
+                            </ul>
+                        </div>
+                        <div class="graphic-card card-3 widget-card">
+                            <div class="uptime-ring" data-uptime="99.98">
+                                <svg viewBox="0 0 120 120" class="uptime-svg" aria-hidden="true">
+                                    <circle cx="60" cy="60" r="48" class="uptime-track"></circle>
+                                    <circle cx="60" cy="60" r="48" class="uptime-progress"></circle>
+                                </svg>
+                                <div class="uptime-center">
+                                    <span class="uptime-value">99.98%</span>
+                                    <span class="uptime-label">Platform Uptime</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-scroll-indicator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="#EB5E28" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+    </section>
+ <section id="demo" class="demo-section">
+        <div class="container">
+            <div class="section-header centered">
+                <h2>See the Magic in Action</h2>
+                <p>Watch how agencies transform their operations in just 3 minutes</p>
+            </div>
+
+            <div class="video-showcase">
+                <div class="video-container">
+                    <div class="video-frame">
+                        <button class="video-play-btn" type="button" aria-label="Play AgencyOS demo video">
+                            <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                                <circle cx="30" cy="30" r="29" stroke="#EB5E28" stroke-width="2"/>
+                                <path d="M23 18V42L42 30Z" fill="#EB5E28"/>
+                            </svg>
+                        </button>
+                        <div class="video-overlay"></div>
+                    </div>
+                    <div class="video-info">
+                        <span class="video-duration">3:45</span>
+                        <span class="video-subtitle">Platform Overview</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM → SOLUTION -->
+    <section id="solution" class="problem-solution">
+        <div class="container">
+            <div class="section-header">
+                <h2>Your Agency's Silent Struggle</h2>
+                <p>We know the pain. We built the solution.</p>
+            </div>
+
+            <div class="ps-grid">
+                <div class="ps-column problem-column">
+                    <h3 class="ps-title">The Problem</h3>
+                    <div class="ps-items">
+                        <div class="ps-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <rect x="4" y="3" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M7 7H15M7 11H15M7 15H12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Fragmented Tools</h4>
+                                <p>Jumping between 15+ disconnected platforms daily</p>
+                            </div>
+                        </div>
+                        <div class="ps-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <circle cx="11" cy="11" r="7.5" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M11 6.5V11L14 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Manual Overhead</h4>
+                                <p>30% of team time lost to repetitive tasks</p>
+                            </div>
+                        </div>
+                        <div class="ps-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <path d="M6 15.5C6.7 13.7 8.6 12.5 11 12.5C13.4 12.5 15.3 13.7 16 15.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.6"/>
+                                    <circle cx="14" cy="8" r="2" stroke="currentColor" stroke-width="1.6"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Communication Gaps</h4>
+                                <p>Misaligned teams, missed deadlines, unhappy clients</p>
+                            </div>
+                        </div>
+                        <div class="ps-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <path d="M4 17V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M4 17H18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M7 14V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M11 14V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M15 14V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>No Real Visibility</h4>
+                                <p>Can't see true project health or team capacity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ps-divider">
+                    <div class="divider-line"></div>
+                </div>
+
+                <div class="ps-column solution-column">
+                    <h3 class="ps-title">The AgencyOS Solution</h3>
+                    <div class="ps-items">
+                        <div class="ps-item solution-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <rect x="3.5" y="4" width="15" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M7 8H15M7 11H12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Unified Workspace</h4>
+                                <p>Everything in one intelligent platform</p>
+                            </div>
+                        </div>
+                        <div class="ps-item solution-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <path d="M8 4L4 11H9L7 18L16 9H11L13 4H8Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>AI Automation</h4>
+                                <p>Intelligent workflows handle repetitive work</p>
+                            </div>
+                        </div>
+                        <div class="ps-item solution-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <path d="M7 12.5L10 9.5L13 12.5L17 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle cx="7" cy="12.5" r="1.4" stroke="currentColor" stroke-width="1.4"/>
+                                    <circle cx="10" cy="9.5" r="1.4" stroke="currentColor" stroke-width="1.4"/>
+                                    <circle cx="13" cy="12.5" r="1.4" stroke="currentColor" stroke-width="1.4"/>
+                                    <circle cx="17" cy="8.5" r="1.4" stroke="currentColor" stroke-width="1.4"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Seamless Collaboration</h4>
+                                <p>Real-time sync across your entire team</p>
+                            </div>
+                        </div>
+                        <div class="ps-item solution-item">
+                            <div class="ps-icon" aria-hidden="true">
+                                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                                    <path d="M4 17V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M4 17H18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M7 13L10 10L13 12L17 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4>Radical Transparency</h4>
+                                <p>Crystal clear visibility into every project</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section id="features" class="services-section">
+        <div class="container">
+            <div class="section-header centered">
+                <h2>Enterprise-Grade Features</h2>
+                <p>Everything you need to run your agency at peak efficiency</p>
+            </div>
+
+            <div class="features-carousel-container" data-carousel>
+                <button class="carousel-arrow carousel-arrow-left" type="button" aria-label="Previous feature" data-carousel-prev>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+
+                <div class="features-carousel-viewport">
+                    <div class="features-carousel-track">
+                        <div class="feature-carousel-item premium-card">
+                            <div class="service-glow"></div>
+                            <div class="service-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M7 15H11M7 11H17M7 7H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <h3>Intelligent Dashboard</h3>
+                            <p>Real-time insights into all projects, resources, and performance metrics at a glance</p>
+                            <ul class="feature-list">
+                                <li>Custom KPI tracking</li>
+                                <li>Predictive analytics</li>
+                                <li>Smart alerts</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-carousel-item premium-card">
+                            <div class="service-glow"></div>
+                            <div class="service-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect x="6" y="6" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M12 3V6M12 18V21M3 12H6M18 12H21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M9 9H15V15H9V9Z" stroke="currentColor" stroke-width="1.2"/>
+                                </svg>
+                            </div>
+                            <h3>AI Workflows</h3>
+                            <p>Automate repetitive tasks and processes with intelligent, learning-based automation</p>
+                            <ul class="feature-list">
+                                <li>Process automation</li>
+                                <li>Content generation</li>
+                                <li>Smart scheduling</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-carousel-item premium-card">
+                            <div class="service-glow"></div>
+                            <div class="service-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.6"/>
+                                    <circle cx="16" cy="8" r="2.2" stroke="currentColor" stroke-width="1.6"/>
+                                    <circle cx="12" cy="16" r="2.2" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M9.7 9.5L12 13M14.3 9.5L12 13M10.3 16H13.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <h3>Team Collaboration</h3>
+                            <p>Unified workspace where your entire team works together seamlessly</p>
+                            <ul class="feature-list">
+                                <li>Real-time sync</li>
+                                <li>File management</li>
+                                <li>Communication hub</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-carousel-item premium-card">
+                            <div class="service-glow"></div>
+                            <div class="service-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect x="4.5" y="7" width="15" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/>
+                                    <path d="M9 7V6.2C9 5.2 9.8 4.4 10.8 4.4H13.2C14.2 4.4 15 5.2 15 6.2V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M4.5 11H19.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <h3>Client Management</h3>
+                            <p>Delight clients with transparent portals and real-time project visibility</p>
+                            <ul class="feature-list">
+                                <li>Client portals</li>
+                                <li>Status updates</li>
+                                <li>Approval workflows</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-carousel-item premium-card">
+                            <div class="service-glow"></div>
+                            <div class="service-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M4 18V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M4 18H20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M7 15L11 11L14 13L19 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <h3>Advanced Analytics</h3>
+                            <p>Deep insights with custom reports to measure what matters most</p>
+                            <ul class="feature-list">
+                                <li>Custom dashboards</li>
+                                <li>Historical trends</li>
+                                <li>ROI tracking</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-carousel-item premium-card">
+                            <div class="service-glow"></div>
+                            <div class="service-icon" aria-hidden="true">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 3.5L18 6V11C18 15.1 15.3 18.6 12 20.5C8.7 18.6 6 15.1 6 11V6L12 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                                    <path d="M9.5 11.5L11 13L14.5 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <h3>Enterprise Security</h3>
+                            <p>Bank-level security with compliance to all major standards</p>
+                            <ul class="feature-list">
+                                <li>SSO & 2FA</li>
+                                <li>Data encryption</li>
+                                <li>Audit trails</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="carousel-arrow carousel-arrow-right" type="button" aria-label="Next feature" data-carousel-next>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M8 4L14 10L8 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="carousel-indicators" data-carousel-indicators>
+                <button class="carousel-dot is-active" type="button" aria-label="Go to feature 1" data-carousel-index="0"></button>
+                <button class="carousel-dot" type="button" aria-label="Go to feature 2" data-carousel-index="1"></button>
+                <button class="carousel-dot" type="button" aria-label="Go to feature 3" data-carousel-index="2"></button>
+                <button class="carousel-dot" type="button" aria-label="Go to feature 4" data-carousel-index="3"></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section id="success-journey" class="process-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Your Success Journey</h2>
+                <p>From signup to transformation in just 30 days</p>
+            </div>
+
+            <div class="process-steps process-steps-compact">
+                <div class="process-step process-card">
+                    <div class="step-badge">1</div>
+                    <div class="step-content">
+                        <h4>Foundation</h4>
+                        <p>Quick setup, onboarding, and process review.</p>
+                    </div>
+                </div>
+
+                <div class="process-step process-card">
+                    <div class="step-badge">2</div>
+                    <div class="step-content">
+                        <h4>Optimization</h4>
+                        <p>We shape your workflows and automate the busywork.</p>
+                    </div>
+                </div>
+
+                <div class="process-step process-card">
+                    <div class="step-badge">3</div>
+                    <div class="step-content">
+                        <h4>Launch & Grow</h4>
+                        <p>Deploy fast, then refine as your team scales.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- FINAL CTA -->
+    <section id="contact" class="final-cta">
+        <div class="cta-wrapper">
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to Transform Your Agency?</h2>
+                <p class="cta-subtitle">
+                    Join hundreds of agencies already experiencing unprecedented efficiency, profitability, and team satisfaction.
+                </p>
+
+                <div class="cta-buttons">
+                    <button class="btn btn-primary btn-large">
+                        <span>Start Free Trial Today</span>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M7 10H13M13 10L10 7M13 10L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-secondary btn-large">
+                        <span>Schedule Demo Call</span>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 5V10M10 10L13 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="cta-note">✓ No credit card required  •  ✓ 14-day free access  •  ✓ Full feature access</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <div class="footer-logo">
+                        <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+                            <rect x="4" y="4" width="8" height="8" fill="#EB5E28"/>
+                            <rect x="16" y="4" width="8" height="8" fill="#CCC5B9"/>
+                            <rect x="4" y="16" width="8" height="8" fill="#CCC5B9"/>
+                            <rect x="16" y="16" width="8" height="8" fill="#EB5E28"/>
+                        </svg>
+                        <span>AgencyOS</span>
+                    </div>
+                    <p>Empowering agencies with intelligent operations management.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link">Twitter</a>
+                        <a href="#" class="social-link">LinkedIn</a>
+                        <a href="#" class="social-link">GitHub</a>
+                    </div>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#demo">Features</a></li>
+                        <li><a href="#">Pricing</a></li>
+                        <li><a href="#">Security</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Terms</a></li>
+                        <li><a href="#">Compliance</a></li>
+                        <li><a href="#">Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-divider"></div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 AgencyOS. All rights reserved. Crafted with precision.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="video-modal" id="videoModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="AgencyOS product demo video">
+        <div class="video-modal-backdrop" data-close-video-modal></div>
+        <div class="video-modal-content" role="document">
+            <button class="video-modal-close" type="button" aria-label="Close demo video" data-close-video-modal>&times;</button>
+            <div class="video-modal-frame">
+                <iframe
+                    id="demoVideoFrame"
+                    title="AgencyOS platform demo"
+                    data-src="https://www.youtube.com/embed/ysz5S6PUM-U?autoplay=1&rel=0"
+                    src="about:blank"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/lenis@1.1.9/dist/lenis.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
