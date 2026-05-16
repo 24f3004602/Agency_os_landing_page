@@ -17,7 +17,7 @@
     <div class="gradient-orb orb-3"></div>
 
     <!-- NAVBAR -->
-    <nav class="navbar">
+    <nav class="navbar" id="mainNavbar">
         <div class="navbar-wrapper">
             <div class="navbar-content">
                 <div class="navbar-logo">
@@ -30,31 +30,32 @@
                     <span>AgencyOS</span>
                 </div>
 
-                <ul class="nav-menu">
+                <ul class="nav-menu" id="navMenu">
                     <li><a href="#hero" class="nav-link">Platform</a></li>
-                    <li><a href="#solution" class="nav-link">Problem & Solution</a></li>
+                    <li><a href="#demo" class="nav-link">Demo Video</a></li>
+                    <li><a href="#solution" class="nav-link">Problem &amp; Solution</a></li>
                     <li><a href="#features" class="nav-link">Features</a></li>
-                    <li><a href="#success-journey" class="nav-link">Success Journey</a></li>
+                    <li class="nav-cta-mobile"><button class="nav-cta" onclick="scrollToSection('contact')">Start Free</button></li>
                 </ul>
 
                 <div class="nav-actions">
                     <button class="nav-cta" onclick="scrollToSection('contact')">Start Free</button>
                 </div>
 
-                <div class="hamburger">
+                <button class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
                     <span></span>
                     <span></span>
                     <span></span>
-                </div>
+                </button>
             </div>
         </div>
-        <div class="navbar-underline"></div>
     </nav>
 
     <!-- HERO SECTION -->
     <section id="hero" class="hero">
         <div class="hero-container">
             <div class="hero-grid">
+                <!-- LEFT: Text Content -->
                 <div class="hero-content">
                     <div class="hero-badge">
                         <span class="badge-icon" aria-hidden="true">
@@ -106,6 +107,7 @@
                     </div>
                 </div>
 
+                <!-- RIGHT: Globe + Cards -->
                 <div class="hero-visual">
                     <div class="globe-container" id="globeContainer">
                         <div class="globe" id="globe">
@@ -117,35 +119,23 @@
                                             <stop offset="100%" style="stop-color:#eb5e28;stop-opacity:0.1" />
                                         </radialGradient>
                                     </defs>
-                                    
-                                    <!-- Ocean -->
                                     <circle cx="200" cy="200" r="200" fill="#403d39" opacity="0.5"/>
-                                    
-                                    <!-- Landmasses -->
                                     <path d="M150,180 Q160,170 180,175 Q190,180 185,195 Q170,200 150,180" fill="#eb5e28" opacity="0.8"/>
                                     <path d="M220,150 Q240,145 250,160 Q245,175 225,170 Q220,165 220,150" fill="#eb5e28" opacity="0.8"/>
                                     <path d="M280,200 Q300,195 310,210 Q305,225 285,220 Q280,215 280,200" fill="#eb5e28" opacity="0.8"/>
                                     <path d="M100,220 Q120,215 125,235 Q115,245 100,240 Q95,230 100,220" fill="#eb5e28" opacity="0.8"/>
                                     <path d="M200,280 Q220,275 225,295 Q210,305 195,300 Q195,290 200,280" fill="#eb5e28" opacity="0.8"/>
-                                    
-                                    <!-- Connections/Networks -->
                                     <line x1="150" y1="190" x2="220" y2="160" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
                                     <line x1="220" y1="160" x2="280" y2="210" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
                                     <line x1="280" y1="210" x2="200" y2="290" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
                                     <line x1="200" y1="290" x2="100" y2="230" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
                                     <line x1="100" y1="230" x2="150" y2="190" stroke="#eb5e28" stroke-width="2" opacity="0.6"/>
-                                    
-                                    <!-- Connection nodes -->
                                     <circle cx="150" cy="190" r="4" fill="#EB5E28"/>
                                     <circle cx="220" cy="160" r="4" fill="#EB5E28"/>
                                     <circle cx="280" cy="210" r="4" fill="#EB5E28"/>
                                     <circle cx="200" cy="290" r="4" fill="#EB5E28"/>
                                     <circle cx="100" cy="230" r="4" fill="#EB5E28"/>
-                                    
-                                    <!-- Globe shine/gradient -->
                                     <circle cx="200" cy="200" r="200" fill="url(#globeGradient)"/>
-                                    
-                                    <!-- Grid lines -->
                                     <circle cx="200" cy="200" r="200" fill="none" stroke="#ccc5b9" stroke-width="1" opacity="0.2"/>
                                     <circle cx="200" cy="200" r="150" fill="none" stroke="#ccc5b9" stroke-width="1" opacity="0.15"/>
                                     <circle cx="200" cy="200" r="100" fill="none" stroke="#ccc5b9" stroke-width="1" opacity="0.1"/>
@@ -155,42 +145,43 @@
                         <div class="globe-glow"></div>
                     </div>
 
-                    <div class="hero-graphic">
-                        <div class="graphic-card card-1 widget-card">
-                            <div class="widget-title-row">
-                                <span class="widget-title">Weekly Pipeline</span>
-                                <span class="widget-metric" data-count="42">0</span>
-                            </div>
-                            <div class="mini-bars">
-                                <div class="mini-bar" data-height="55"></div>
-                                <div class="mini-bar" data-height="72"></div>
-                                <div class="mini-bar" data-height="64"></div>
-                                <div class="mini-bar" data-height="88"></div>
-                                <div class="mini-bar" data-height="96"></div>
-                            </div>
-                            <p class="widget-caption">Qualified opportunities this week</p>
+                    <!-- Floating Cards -->
+                    <div class="graphic-card card-1 widget-card">
+                        <div class="widget-title-row">
+                            <span class="widget-title">Weekly Pipeline</span>
+                            <span class="widget-metric" data-count="42">0</span>
                         </div>
-                        <div class="graphic-card card-2 widget-card">
-                            <div class="widget-title-row">
-                                <span class="widget-title">Launch Checklist</span>
-                                <span class="widget-status">Live</span>
-                            </div>
-                            <ul class="task-list">
-                                <li class="task-item"><span class="task-check"></span>Client brief approved</li>
-                                <li class="task-item"><span class="task-check"></span>Assets synced to team</li>
-                                <li class="task-item"><span class="task-check"></span>Automation rules active</li>
-                            </ul>
+                        <div class="mini-bars">
+                            <div class="mini-bar" data-height="55"></div>
+                            <div class="mini-bar" data-height="72"></div>
+                            <div class="mini-bar" data-height="64"></div>
+                            <div class="mini-bar" data-height="88"></div>
+                            <div class="mini-bar" data-height="96"></div>
                         </div>
-                        <div class="graphic-card card-3 widget-card">
-                            <div class="uptime-ring" data-uptime="99.98">
-                                <svg viewBox="0 0 120 120" class="uptime-svg" aria-hidden="true">
-                                    <circle cx="60" cy="60" r="48" class="uptime-track"></circle>
-                                    <circle cx="60" cy="60" r="48" class="uptime-progress"></circle>
-                                </svg>
-                                <div class="uptime-center">
-                                    <span class="uptime-value">99.98%</span>
-                                    <span class="uptime-label">Platform Uptime</span>
-                                </div>
+                        <p class="widget-caption">Qualified opportunities this week</p>
+                    </div>
+
+                    <div class="graphic-card card-2 widget-card">
+                        <div class="widget-title-row">
+                            <span class="widget-title">Launch Checklist</span>
+                            <span class="widget-status">Live</span>
+                        </div>
+                        <ul class="task-list">
+                            <li class="task-item"><span class="task-check"></span>Client brief approved</li>
+                            <li class="task-item"><span class="task-check"></span>Assets synced to team</li>
+                            <li class="task-item"><span class="task-check"></span>Automation rules active</li>
+                        </ul>
+                    </div>
+
+                    <div class="graphic-card card-3 widget-card">
+                        <div class="uptime-ring" data-uptime="99.98">
+                            <svg viewBox="0 0 120 120" class="uptime-svg" aria-hidden="true">
+                                <circle cx="60" cy="60" r="48" class="uptime-track"></circle>
+                                <circle cx="60" cy="60" r="48" class="uptime-progress"></circle>
+                            </svg>
+                            <div class="uptime-center">
+                                <span class="uptime-value">99.98%</span>
+                                <span class="uptime-label">Platform Uptime</span>
                             </div>
                         </div>
                     </div>
@@ -204,13 +195,14 @@
             </svg>
         </div>
     </section>
- <section id="demo" class="demo-section">
+
+    <!-- DEMO SECTION -->
+    <section id="demo" class="demo-section">
         <div class="container">
             <div class="section-header centered">
                 <h2>See the Magic in Action</h2>
                 <p>Watch how agencies transform their operations in just 3 minutes</p>
             </div>
-
             <div class="video-showcase">
                 <div class="video-container">
                     <div class="video-frame">
@@ -238,7 +230,6 @@
                 <h2>Your Agency's Silent Struggle</h2>
                 <p>We know the pain. We built the solution.</p>
             </div>
-
             <div class="ps-grid">
                 <div class="ps-column problem-column">
                     <h3 class="ps-title">The Problem</h3>
@@ -285,9 +276,7 @@
                                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                                     <path d="M4 17V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                                     <path d="M4 17H18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                                    <path d="M7 14V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                                    <path d="M11 14V7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                                    <path d="M15 14V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    <path d="M7 14V10M11 14V7.5M15 14V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                                 </svg>
                             </div>
                             <div>
@@ -298,9 +287,7 @@
                     </div>
                 </div>
 
-                <div class="ps-divider">
-                    <div class="divider-line"></div>
-                </div>
+                <div class="ps-divider"><div class="divider-line"></div></div>
 
                 <div class="ps-column solution-column">
                     <h3 class="ps-title">The AgencyOS Solution</h3>
@@ -346,8 +333,7 @@
                         <div class="ps-item solution-item">
                             <div class="ps-icon" aria-hidden="true">
                                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                                    <path d="M4 17V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                                    <path d="M4 17H18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M4 17V5M4 17H18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                                     <path d="M7 13L10 10L13 12L17 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </div>
@@ -362,7 +348,7 @@
         </div>
     </section>
 
-    <!-- SERVICES -->
+    <!-- FEATURES CAROUSEL -->
     <section id="features" class="services-section">
         <div class="container">
             <div class="section-header centered">
@@ -402,7 +388,6 @@
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                                     <rect x="6" y="6" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/>
                                     <path d="M12 3V6M12 18V21M3 12H6M18 12H21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                                    <path d="M9 9H15V15H9V9Z" stroke="currentColor" stroke-width="1.2"/>
                                 </svg>
                             </div>
                             <h3>AI Workflows</h3>
@@ -455,8 +440,7 @@
                             <div class="service-glow"></div>
                             <div class="service-icon" aria-hidden="true">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                    <path d="M4 18V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                                    <path d="M4 18H20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    <path d="M4 18V6M4 18H20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                                     <path d="M7 15L11 11L14 13L19 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </div>
@@ -480,7 +464,7 @@
                             <h3>Enterprise Security</h3>
                             <p>Bank-level security with compliance to all major standards</p>
                             <ul class="feature-list">
-                                <li>SSO & 2FA</li>
+                                <li>SSO &amp; 2FA</li>
                                 <li>Data encryption</li>
                                 <li>Audit trails</li>
                             </ul>
@@ -504,132 +488,40 @@
         </div>
     </section>
 
-    <!-- PROCESS -->
-    <section id="success-journey" class="process-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Your Success Journey</h2>
-                <p>From signup to transformation in just 30 days</p>
-            </div>
-
-            <div class="process-steps process-steps-compact">
-                <div class="process-step process-card">
-                    <div class="step-badge">1</div>
-                    <div class="step-content">
-                        <h4>Foundation</h4>
-                        <p>Quick setup, onboarding, and process review.</p>
-                    </div>
-                </div>
-
-                <div class="process-step process-card">
-                    <div class="step-badge">2</div>
-                    <div class="step-content">
-                        <h4>Optimization</h4>
-                        <p>We shape your workflows and automate the busywork.</p>
-                    </div>
-                </div>
-
-                <div class="process-step process-card">
-                    <div class="step-badge">3</div>
-                    <div class="step-content">
-                        <h4>Launch & Grow</h4>
-                        <p>Deploy fast, then refine as your team scales.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
     <!-- FINAL CTA -->
     <section id="contact" class="final-cta">
-        <div class="cta-wrapper">
-            <div class="cta-content">
-                <h2 class="cta-title">Ready to Transform Your Agency?</h2>
-                <p class="cta-subtitle">
-                    Join hundreds of agencies already experiencing unprecedented efficiency, profitability, and team satisfaction.
-                </p>
-
-                <div class="cta-buttons">
-                    <button class="btn btn-primary btn-large">
-                        <span>Start Free Trial Today</span>
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M7 10H13M13 10L10 7M13 10L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
-                    <button class="btn btn-secondary btn-large">
-                        <span>Schedule Demo Call</span>
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M10 5V10M10 10L13 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
+        <div class="container">
+            <div class="cta-wrapper">
+                <div class="cta-content">
+                    <h2 class="cta-title">Ready to Transform Your Agency?</h2>
+                    <p class="cta-subtitle">
+                        Join hundreds of agencies already experiencing unprecedented efficiency, profitability, and team satisfaction.
+                    </p>
+                    <div class="cta-buttons">
+                        <button class="btn btn-primary btn-large">
+                            <span>Start Free Trial Today</span>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M7 10H13M13 10L10 7M13 10L10 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-secondary btn-large">
+                            <span>Schedule Demo Call</span>
+                        </button>
+                    </div>
+                    <p class="cta-note">✓ No credit card required &nbsp;•&nbsp; ✓ 14-day free access &nbsp;•&nbsp; ✓ Full feature access</p>
                 </div>
-
-                <p class="cta-note">✓ No credit card required  •  ✓ 14-day free access  •  ✓ Full feature access</p>
             </div>
         </div>
     </section>
 
     <!-- FOOTER -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-column">
-                    <div class="footer-logo">
-                        <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-                            <rect x="4" y="4" width="8" height="8" fill="#EB5E28"/>
-                            <rect x="16" y="4" width="8" height="8" fill="#CCC5B9"/>
-                            <rect x="4" y="16" width="8" height="8" fill="#CCC5B9"/>
-                            <rect x="16" y="16" width="8" height="8" fill="#EB5E28"/>
-                        </svg>
-                        <span>AgencyOS</span>
-                    </div>
-                    <p>Empowering agencies with intelligent operations management.</p>
-                    <div class="social-links">
-                        <a href="#" class="social-link">Twitter</a>
-                        <a href="#" class="social-link">LinkedIn</a>
-                        <a href="#" class="social-link">GitHub</a>
-                    </div>
-                </div>
-
-                <div class="footer-column">
-                    <h4>Product</h4>
-                    <ul>
-                        <li><a href="#demo">Features</a></li>
-                        <li><a href="#">Pricing</a></li>
-                        <li><a href="#">Security</a></li>
-                    </ul>
-                </div>
-
-                <div class="footer-column">
-                    <h4>Company</h4>
-                    <ul>
-                        <li><a href="#">About</a></li>
-                        <li><a href="#">Blog</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Contact</a></li>
-                    </ul>
-                </div>
-
-                <div class="footer-column">
-                    <h4>Legal</h4>
-                    <ul>
-                        <li><a href="#">Privacy</a></li>
-                        <li><a href="#">Terms</a></li>
-                        <li><a href="#">Compliance</a></li>
-                        <li><a href="#">Cookies</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="footer-divider"></div>
-
-            <div class="footer-bottom">
-                <p>&copy; 2026 AgencyOS. All rights reserved. Crafted with precision.</p>
-            </div>
+    <footer>
+        <div class="footer-bottom">
+            <p>&copy; 2026 AgencyOS. All rights reserved. Crafted with precision.</p>
         </div>
     </footer>
 
+    <!-- VIDEO MODAL -->
     <div class="video-modal" id="videoModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="AgencyOS product demo video">
         <div class="video-modal-backdrop" data-close-video-modal></div>
         <div class="video-modal-content" role="document">
@@ -648,6 +540,7 @@
             </div>
         </div>
     </div>
+
     <script src="https://unpkg.com/lenis@1.1.9/dist/lenis.min.js"></script>
     <script src="script.js"></script>
 </body>
